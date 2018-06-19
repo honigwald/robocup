@@ -1,0 +1,66 @@
+###################################### UNUSED ####################################################
+/// TheAppBot (1)
+-> Control App: Using the camera for visualisation and the App for controlling the bot
+
+
+/// Optical Character Recognition (OCR) (4)
+-> Read a paper out loud
+
+########################################
+
+/// Unknown environment Bot
+-> Recognise unknown environment
+-> Able to walk in e.g. forest
+
+/// Referee-Bot
+-> Recognizing Goal, Offside, Out of Bound
+
+
+
+
+
+/// Greeting-Agent (I)  {Empfangsdame}
+-> Suche nach einer bestimmten Markierung
+	: bspw. neonfarbenes Band am Hosenbein
+-> Gehe hin und mach zufällige Posture
+	: 
+-> Mögl. Probleme
+	: Person nicht im Raum
+	: Person verlässt den Raum
+	: Erkennt keine Markierung
+	: Kann nur bestimmte Personen begrüßen
+
+/// Alexa integration (II)
+-> Listening to commands
+	:1 Cmd - Starten der Demo
+	:2 Cmd - Begrüße Person X mit X:= Farbe des Fußgelenk-Bandes
+	:3 Cmd - Schmeiße Person X aus dem Raum
+	:4 Cmd - Verabschiede die Gesellschaft
+
+
+
+Detaillierter Ablauf:
+-> Start der Demonstration
+	- Roboter befindet sich in einem Raum (mit Personen)
+	- per Sprachsteuerung wird dem Roboter gesagt: “Begrüße alle Personen”
+	
+-> Initialisierung (“Begrüße alle Person”):
+	- Falls sich Personen im Raum befinden, benutzt er FaceID um die Personen zu erkennen
+	- Er geht zu jeder erkannten Person, begrüßt dieses und fragt nach dem Namen
+	- FaceID und Namen werden als Tupel gespeichert
+
+[examMode()]
+Case 1 : Everything is silent , robot keeps roaming around
+Case 2 : Nao recognises voice , he tracks the source
+         Nao checks if the person has previous warnings
+	 Case 2a :
+	 	Person has no previous warnings , Nao gives him a warning
+	 Case 2b:
+		Person has a previous warning , triggers throwOut Module , 
+		where it takes the student outside of the exam hall
+
+[throwOut()]
+Two types of triggers :
+	- Throw out via Voice command 
+	- Triggered after 2nd warning in Exam Mode 
+	-> Ask the student to follow him to the door, Thanks the student , see you next semester 
