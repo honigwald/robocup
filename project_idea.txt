@@ -1,0 +1,61 @@
+PROJECT: THE ASSISTANT
+——————————————————————
+Descripton:
+- Der Roboter wird als persönlicher Assistent eingesetzt.
+- Zur Steuerung des Bots wird “Python Speech Recognition” o.ä. genutzt.
+- Hierfür gibt es spezifische Kommandos.
+    -> Kommandoliste (WakeUp Word: Ok Nao?)
+        "Begrüße Personen im Raum"          -> executeGreeting()
+        "Führe <Keyframe/Motion> aus"       -> executeKeyframe()
+        "Stoppe Demonstration"              -> exit()
+- Weitere Features/Kommandos werden ggf. implementiert
+
+[voiceListener]
+- wait for wakeup-word
+- case1: wakeup
+    - listen to cmd
+    - subcase1: cmd is known
+        subsubcase1: greeting
+            - execute greeting
+        subsubcase2: keyframe 
+            - execute keyframe with recognized motion
+    - subcase2: cmd is unknown
+        - execute unknown_cmd
+
+[executeGreeting]
+case1: execute greeting
+    - walk through environment
+    - looking for people
+    - greet people with random scentence
+
+[executeKeyframe]
+case1: execute keyframe
+    - execute keyframe with given motion
+
+[unknown_cmd]
+- SAY: <something>
+- return voiceListener
+
+[exit]
+- end program
+
+
+
+############################### FALLS NOCH ZEIT IST ########################################
+[Initialisierung]
+case1: Person unbekannt
+        - Nao nimmt mehrere Fotos auf
+        - Fragt die person nach ihrem namen
+        - speichert Foto und Name als Tupel ab
+        - Nao bedankt sich und begrüßt die Person
+
+case2: Person ist bekannt
+        - Nao erkennt die Person
+        - Es werden zusätzliche Fotos gespeichert (Erkennung wird verbessert)
+        - Person wird mit ihrem Namen begrüßt
+
+case3: Person ist bekannt wird aber nicht oder nur ungenügend erkannt
+        - Nao fragt bist du Person X
+        - Falls ja, werden zusätzliche Fotos gespeichert (Erkennung wird verbessert)
+        - Falls nein, neue Person wird gespeichert (case1)
+############################################################################################
