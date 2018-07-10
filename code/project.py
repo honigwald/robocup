@@ -1,14 +1,67 @@
 import sys
 from naoqi import ALProxy
 
-# example
+'''
+USAGE: type in terminal: python project.py "10.0.7.1X"
+    X is the number of the robot
+'''
+
+
+# Stand up
+def init(ip, port):
+
+    try:
+        motion = ALProxy("ALMotion", ip, port)
+    except Exception, e:
+        print "Could not create proxy to ALRobotPosture"
+        print "Error was: ", e
+
+    motion.wakeUp()
+
+# should be called at least
+def rest(ip, port):
+
+    try:
+        motion = ALProxy("ALMotion", ip, port)
+    except Exception, e:
+        print "Could not create proxy to ALRobotPosture"
+        print "Error was: ", e
+
+    motion.rest()
+
+# simple example for speaking
 def nao_speak(text, ip, port):
 
-    tts = ALProxy("ALTextToSpeech", ip, port)
+    try:
+        tts = ALProxy("ALTextToSpeech", ip, port)
+    except Exception, e:
+        print "Could not create proxy to ALTextToSpeech"
+        print "Error was: ", e
+
     tts.say(text)
 
-# write function down below and test it in main()
+# simple example for build-in posture
+def nao_posture(posture, ip, port):
 
+    try:
+        postureProxy = ALProxy("ALRobotPosture", ip, port)
+    except Exception, e:
+        print "Could not create proxy to ALRobotPosture"
+        print "Error was: ", e
+
+    postureProxy.goToPosture(posture, 1.0)
+
+'''
+def nao_motion(ip, port):
+
+    try:
+        motion = ALProxy("ALMotion", ip, port)
+    except Exception, e:
+        print "Could not create proxy to ALRobotPosture"
+        print "Error was: ", e
+
+    motion.rest()
+'''
 
 def main():
 
@@ -16,11 +69,17 @@ def main():
     nao_ip = sys.argv[1]
     nao_port = 9559
 
-    # example
-    nao_speak("Test dat shit!", nao_ip, nao_port)
+    # before u ran your code, NaoBot needs to wake up!
+    init(nao_ip, nao_port)
 
-    # test....
+    # enter your code here down below
 
-# Command: python project.py "10.0.7.16"
+    #nao_speak("mama", nao_ip, nao_port)
+    #nao_posture("StandInit", nao_ip, nao_port)
+    #nao_motion(nao_ip, nao_port)
+
+    # after u ran your code, let Naobot rest!
+    rest(nao_ip, nao_port)
+
 if __name__ =='__main__':
     main()
