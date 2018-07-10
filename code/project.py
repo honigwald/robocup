@@ -74,4 +74,4 @@ if __name__ =='__main__':
     #nao.posture("StandInit")
 
     # after u ran your code, let Naobot rest!
-    nao.motion('rest', nao_ip, nao_port)
+    nao.motion('rest')
