@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2017.4.28)  10 JUL 2018 19:08
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2017.4.28)  10 JUL 2018 19:23
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1091,7 +1091,7 @@ Here is how much of TeX's memory you used:
 msfonts/cm/cmbx12.pfb></usr/local/texlive/2016/texmf-dist/fonts/type1/public/am
 sfonts/cm/cmr10.pfb></usr/local/texlive/2016/texmf-dist/fonts/type1/public/amsf
 onts/cm/cmr12.pfb>
-Output written on documentation.pdf (1 page, 37704 bytes).
+Output written on documentation.pdf (1 page, 37701 bytes).
 PDF statistics:
  20 PDF objects out of 1000 (max. 8388607)
  13 compressed objects within 1 object stream
