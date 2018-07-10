@@ -7,8 +7,8 @@ USAGE: type in terminal: python project.py "10.0.7.1X"
 '''
 
 
-# Stand up
-def init(ip, port):
+# different motion listed here
+def nao_motion(state, ip, port):
 
     try:
         motion = ALProxy("ALMotion", ip, port)
@@ -16,18 +16,11 @@ def init(ip, port):
         print "Could not create proxy to ALRobotPosture"
         print "Error was: ", e
 
-    motion.wakeUp()
+    if state == 'wakeUp':
+        motion.wakeUp()
+    elif state == 'rest':
+        motion.rest()
 
-# should be called at least
-def rest(ip, port):
-
-    try:
-        motion = ALProxy("ALMotion", ip, port)
-    except Exception, e:
-        print "Could not create proxy to ALRobotPosture"
-        print "Error was: ", e
-
-    motion.rest()
 
 # simple example for speaking
 def nao_speak(text, ip, port):
@@ -51,17 +44,7 @@ def nao_posture(posture, ip, port):
 
     postureProxy.goToPosture(posture, 1.0)
 
-'''
-def nao_motion(ip, port):
 
-    try:
-        motion = ALProxy("ALMotion", ip, port)
-    except Exception, e:
-        print "Could not create proxy to ALRobotPosture"
-        print "Error was: ", e
-
-    motion.rest()
-'''
 
 def main():
 
@@ -70,7 +53,7 @@ def main():
     nao_port = 9559
 
     # before u ran your code, NaoBot needs to wake up!
-    init(nao_ip, nao_port)
+    nao_motion('wakeUp', nao_ip, nao_port)
 
     # enter your code here down below
 
@@ -79,7 +62,7 @@ def main():
     #nao_motion(nao_ip, nao_port)
 
     # after u ran your code, let Naobot rest!
-    rest(nao_ip, nao_port)
+    nao_motion('rest', nao_ip, nao_port)
 
 if __name__ =='__main__':
     main()
