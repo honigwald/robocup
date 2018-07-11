@@ -15,20 +15,29 @@ class AssistentAgent:
     def __init__(self, ip):
         self.ip = ip
 
+        # TODO: : TEST!!!!!
+        # save proxies into a dict, no need to reinit?
+        self.proxy = {}
 
     # simple example for motion
     def motion(self, state):
-
-        try:
-            motion = ALProxy("ALMotion", self.ip, self.port)
-        except Exception, e:
-            print "Could not create proxy to ALRobotPosture"
-            print "Error was: ", e
+        '''
+        TODO: TEST!!!
+        check if proxy already exist
+         - yes? skip!
+         - no? -> create one and save in the dict
+        '''
+        if !self.proxy[motion]:
+            try:
+                self.proxy[motion] = ALProxy("ALMotion", self.ip, port)
+            except Exception, e:
+                print "Could not create proxy to ALRobotPosture"
+                print "Error was: ", e
 
         if state == 'wakeUp':
-            motion.wakeUp()
+            self.proxy[motion].wakeUp()
         elif state == 'rest':
-            motion.rest()
+            self.proxy[motion].rest()
 
 
     # simple example for speaking
@@ -56,12 +65,13 @@ class AssistentAgent:
 
 
 if __name__ =='__main__':
+
     # parameter for naobot
-    try:
+    if len(sys.args) <= 1:
+        print "USAGE: python project.py <robotIP>"
+    else:
         nao_ip = sys.argv[1]
-    except Exception, e:
-        print "Invalid IP address! Usage: python project.py <IP address>"
-        print "Error was: ", e
+
 
     nao = AssistentAgent(nao_ip)
 
