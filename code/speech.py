@@ -31,8 +31,11 @@ while True:
     if audio is not None:
         string = r.recognize_google(audio, language="de_DE")
         string = string.lower()
-        print string
+        print 'alt1: ' + string
         idx = string.find(KEYWORD)
+
+        words = string.split(' ')
+        print 'alt2: ' , words
 
         if idx != -1:
             # hier ist spass
@@ -45,10 +48,10 @@ while True:
                 t = threading.Thread(target=waitingForVoiceinput, args=(audio, "command"))
                 t.start()
                 t.join(10)
-                if audio is not None: 
+                if audio is not None:
                     string = r.recognize_google(audio, language="de_DE")
                     string = string.lower()
-                    print string 
+                    print string
                     if string == "wake up":
                         feedback("okay waking up")
                     elif string == "go to sleep":
@@ -65,5 +68,3 @@ while True:
 ### NO INPUT
     else:
         print "kein input"
-
-
