@@ -44,7 +44,7 @@ def main(robotIP):
     #####################
     initRobotPosition = m.Pose2D(motionProxy.getRobotPosition(False))
 
-    X = 0.5
+    X = 0.3
     Y = 0.1
     Theta = math.pi/2.0
     motionProxy.post.moveTo(X, Y, Theta)

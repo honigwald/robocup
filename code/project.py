@@ -3,14 +3,7 @@ USAGE:
     - type in terminal: python project.py "10.0.7.1X"
     - X is the number of the naobot
     - default port is 9559 for all naobot in the project
-    - 1. hotword: jarvis
-    - 2. command: debug, hello/goobbye, dance, repeat,
-
-TODO:
-    - face'n name recognition
-    - complete documentation
 '''
-
 
 import sys
 import time
@@ -18,7 +11,6 @@ from naoqi import ALProxy
 from hello import *
 import json
 import speech_recognition as sr
-
 
 
 class AssistentAgent:
@@ -30,21 +22,142 @@ class AssistentAgent:
         self.r = sr.Recognizer()
 
 
+    def speech_recognize(self, time):
+
+        with sr.Microphone() as source:
+            self.r.adjust_for_ambient_noise(source)
+            audio = self.r.listen(source, phrase_time_limit=time)
+            try:
+                return self.r.recognize_google(audio)
+            except LookupError, e:
+                print e
+                return 'there was an error!'
+            except sr.UnknownValueError, e:
+                print e
+                return 'what do you mean? i do not understand'
+
+
     def learn_face(self):
-        return 0
+
+        try:
+            faceProxy = ALProxy("ALFaceDetection", IP, PORT)
+        except Exception, e:
+            print "Error when creating face detection proxy:"
+            print str(e)
+
+        # TODO Finish this function
+
 
     def demo(self):
         return 0
 
-    def move(self):
+
+    def faceTracker(self):
+
+        try:
+            motion = ALProxy("ALMotion", IP, PORT)
+        except Exception, e:
+            print "Could not create proxy to ALMotion!"
+            print "Error was: ", e
+            return
+
+        try:
+            tracker = ALProxy("ALTracker", IP, PORT)
+        except Exception, e:
+            print "Could not create proxy to ALTracker!"
+            print "Error was: ", e
+            return
+
+         # Add target to track.
+        tracker.setMode('Move')
+        targetName = "Face"
+        faceWidth = 0.1
+        tracker.registerTarget(targetName, faceWidth)
+
+        # Then, start tracker.
+        tracker.track(targetName)
+
+        try:
+            while True:
+
+                # TODO TESTEN!!!!
+                if tracker.isNewTargetDetected():
+                    # Stop tracker.
+                    tracker.stopTracker()
+                    tracker.unregisterAllTargets()
+                    motion.rest()
+                    break
+
+                else:
+                    time.sleep(1)
+
+        except KeyboardInterrupt:
+            print
+            print "Interrupted by user"
+            print "Stopping..."
+
+
+    def move(self, X, Y):
+
+        try:
+            motionProxy  = ALProxy("ALMotion", self.ip, self.port)
+            postureProxy = ALProxy("ALRobotPosture", self.ip, self.port)
+
+            # Wake up robot
+            motionProxy.wakeUp()
+
+            # Send robot to Stand
+            postureProxy.goToPosture("StandInit", 0.5)
+
+            # go to position x, y
+            Theta = 0.0
+            Frequency = 0.5 # max speed
+            try:
+                motionProxy.moveToward(X, Y, Theta, [["Frequency", Frequency]])
+            except Exception, errorMsg:
+                print str(errorMsg)
+                print "This example is not allowed on this robot."
+                exit()
+
+            motionProxy.rest()
+
+
+
+        except Exception, e:
+            print e
+
         return 0
 
-    def say(self):
-        return 0
+
+    def say(self, text):
+
+        try:
+            tts = ALProxy("ALTextToSpeech", self.ip, self.port)
+            tts.say(text)
+
+        except Exception, e:
+            print "Could not create proxy to ALTextToSpeech!"
+            print "Error was: ", e
 
 
-    # let nao do a motion based on the state
-    def motion(self, state, detector):
+    def set_nao_face_detection_tracking(nao_ip, nao_port, tracking_enabled):
+        """Make a proxy to nao's ALFaceDetection and enable/disable tracking.
+        """
+        try:
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
+        except Exception, e:
+            print e
+
+        print "Will set tracking to '%s' on the robot ..." % tracking_enabled
+
+        # Enable or disable tracking.
+        faceProxy.enableTracking(tracking_enabled)
+
+        # Just to make sure correct option is set.
+        print "Is tracking now enabled on the robot?", faceProxy.isTrackingEnabled()
+
+
+    def motion(self, state):
 
         try:
             motionProxy = ALProxy("ALMotion", self.ip, self.port)
@@ -53,19 +166,20 @@ class AssistentAgent:
             if state == 'wakeUp':
                 self.say('ok')
                 motionProxy.wakeUp()
+
             elif state == 'rest':
                 self.say('ok')
                 motionProxy.rest()
 
-            self.activateDetector()
-            self.say('i am ready for your next command')
-
         except Exception, e:
             print "Could not create proxy to ALRobotPosture"
             print "Error was: ", e
-            self.exceptionHandler(detector)
 
-    def faceLearning(self, detector = None):
+
+    # -----------------------------------------------------------------------
+    # let nao do a motion based on the state
+
+    def faceLearning(self):
 
         try:
             faceProxy = ALProxy("ALFaceDetection", IP, PORT)
@@ -73,37 +187,7 @@ class AssistentAgent:
             print "Error when creating face detection proxy:"
             print str(e)
 
-        for i in range(0, 20):
-            time.sleep(0.5)
-            val = memoryProxy.getData(memValue, 0)
-            print ""
-            print "\*****"
-            print ""
-
-            # Check whether we got a valid output: a list with two fields.
-            if(val and isinstance(val, list) and len(val) == 2):
-                # We detected faces !
-                # For each face, we can read its shape info and ID.
-                # First Field = TimeStamp.
-                timeStamp = val[0]
-                # Second Field = array of face_Info's.
-                faceInfoArray = val[1]
-                print val
-
-                # todo: check database
-                with open('database.txt') as data_file:
-                    data = json.load(data_file)
-
-                try:
-                    name = data[faceInfoArray[1][0]]
-                    print name
-                except Exception, e:
-
-                    print e
-
-                f = open("write.json", "w")
-                f.write(data)
-
+        # TODO Finish this function
 
 
     def keyframes(self):
@@ -139,22 +223,6 @@ class AssistentAgent:
         motionProxy.angleInterpolation(names, angleLists, times, isAbsolute)
         '''
 
-    # let nao say something out loud based on a text; detector only, if it's a command
-    def say(self, text, detector = None):
-
-        try:
-            tts = ALProxy("ALTextToSpeech", self.ip, self.port)
-
-            if detector != None:
-                detector.terminate()
-                self.activateDetector()
-
-            tts.say(text)
-
-        except Exception, e:
-            print "Could not create proxy to ALTextToSpeech"
-            print "Error was: ", e
-            self.exceptionHandler(detector)
 
     # simple example for build-in posture
     def posture(self, posture):
@@ -167,51 +235,7 @@ class AssistentAgent:
             print "Error was: ", e
 
 
-    def speech_recognize(self, time):
-
-        with sr.Microphone() as source:
-            self.r.adjust_for_ambient_noise(source)
-            audio = self.r.listen(source, phrase_time_limit=time)
-            try:
-                return self.r.recognize_google(audio)
-            except LookupError, e:
-                print e
-                return ''
-            except sr.UnknownValueError, e:
-                print e
-    '''
-    # first detector for hot word
-    def activateDetector(self):
-
-        # setup for hot word: 'jarvis'
-        activater = snowboydecoder.HotwordDetector(['jarvis.pmdl'], sensitivity=0.5)
-        print 'wait for activation...'
-
-        # start hot word detector
-        callback = [lambda: nao.commandDetector(activater)]
-        activater.start(detected_callback=callback, sleep_time=0.5)
-
-    # second detector for command
-    def commandDetector(self, activater):
-
-        activater.terminate()
-
-        # setup for command: 'say', 'wake up', 'go to sleep'
-        words = ['say.pmdl','wake_up.pmdl', 'go_to_sleep.pmdl']
-        detector = snowboydecoder.HotwordDetector(words, sensitivity=0.5)
-
-        print 'wait for command...'
-        self.say('What should i do?')
-
-        # start hot command detector
-        callbacks = [lambda: self.speak('hello', detector), lambda: self.motion('wakeUp', detector), lambda: self.motion('rest', detector)]
-        detector.start(detected_callback=callbacks, sleep_time=0.5)
-
-    # exeption handler for errors
-    def exceptionHandler(self, detector):
-        detector.terminate()
-        self.activateDetector()
-    '''
+    #------------------------------------------------------------------------
 
 if __name__ =='__main__':
 
@@ -227,19 +251,36 @@ if __name__ =='__main__':
     while True:
 
         print "I listen hotword... sir"
+        nao.say('waiting for a hotword!')
         try:
             hotword = nao.speech_recognize(1.0).lower()
-            print "You said " + hotword
+            print "You said: " + hotword
             if hotword == "alexa":
                 print "I listen for command... sir"
+                nao.say('listen for a command!')
                 try:
                     command = nao.speech_recognize(2.0).lower()
-                    print "You said " + command
+                    print "You said: " + command
+
                     if command == 'hello':
-                        print 'hello'
+                        nao.say('hello, sir!')
+
+                    elif command == 'wake up':
+                        nao.motion('wakeUp')
+
                     elif command == "stop":
+                        nao.say('ok, i will rest now!')
+                        nao.motion('rest')
                         break
+
+                    elif command == 'start face learning':
+                        # TODO
+
+                    elif command == 'start demo':
+                        # TODO
                 except Exception as e:
+                    nao.say('Sorry, i do not understand what you want from me.')
                     print 'WTF ... NONETYPE'
         except Exception as e:
+            print 'not alexa!!!'
             print e
