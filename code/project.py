@@ -121,8 +121,6 @@ class AssistentAgent:
 
             motionProxy.rest()
 
-
-
         except Exception, e:
             print e
 
