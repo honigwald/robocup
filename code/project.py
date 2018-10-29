@@ -276,6 +276,18 @@ if __name__ =='__main__':
                         else:
                             nao.say('oh oh something went wrong')
 
+                    # remove all faces from facedb
+                    elif command == 'clear all faces':
+                        # TODO: NEEDS TO BE TESTED
+                        nao.say('removing all faces from face database')
+                        nao.say('say ok if you really want that')
+                        resp = nao.speech_recognize(2.0).lower()
+                        if resp == 'ok':
+                            nao.clear_facedb(name)
+                            nao.say('database cleared')
+                        else:
+                            nao.say('oh oh something went wrong')
+
                     # run the demonstration of the project
                     elif command == 'start demo':
                         # TODO
