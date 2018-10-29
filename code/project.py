@@ -36,14 +36,29 @@ class AssistentAgent:
 
     def learn_face(self, name):
         try:
-            faceProxy = ALProxy("ALFaceDetection", IP, PORT)
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
         except Exception, e:
             print "Error when creating face detection proxy:"
             print str(e)
-        period = 500
-        faceProxy.subscribe("fp", period, 0.0 )
-        faceProxy.learnFace(name)
-        faceProxy.unsubscribe("fp")
+        
+        #print "Actual DB: %s" % (faceProxy.getLearnedFacesList()) 
+        if (faceProxy.learnFace(name)):
+            print "Learning is complete"
+        else:
+            print "Something went wrong"
+
+    def clear_facedb(self):
+        try:
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
+        except Exception, e:
+            print "Error when creating face detection proxy:"
+            print str(e) 
+        
+        #print "Actual DB: %s" % (faceProxy.getLearnedFacesList()) 
+        if (faceProxy.clearDatabase()):
+            print "DB cleared"
+        else:
+            print "Something went wrong"
 
 
     def demo(self):
@@ -51,14 +66,14 @@ class AssistentAgent:
 
     def faceTracker(self):
         try:
-            motion = ALProxy("ALMotion", IP, PORT)
+            motion = ALProxy("ALMotion", self.ip, self.port)
         except Exception, e:
             print "Could not create proxy to ALMotion!"
             print "Error was: ", e
             return
 
         try:
-            tracker = ALProxy("ALTracker", IP, PORT)
+            tracker = ALProxy("ALTracker", self.ip, self.port)
         except Exception, e:
             print "Could not create proxy to ALTracker!"
             print "Error was: ", e
@@ -212,6 +227,8 @@ class AssistentAgent:
         except Exception, e:
             print "Could not create proxy to ALRobotPosture"
             print "Error was: ", e
+#=============================================================
+# END OF INSECURE CODE SNIPPETS
 #=============================================================
 
 ### MAIN-FUNCTION OF THIS PROJECT
