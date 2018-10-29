@@ -21,9 +21,7 @@ class AssistentAgent:
         self.ip = ip
         self.r = sr.Recognizer()
 
-
     def speech_recognize(self, time):
-
         with sr.Microphone() as source:
             self.r.adjust_for_ambient_noise(source)
             audio = self.r.listen(source, phrase_time_limit=time)
@@ -36,39 +34,52 @@ class AssistentAgent:
                 print e
                 return 'what do you mean? i do not understand'
 
-
-    def learn_face(self):
-
+    def learn_face(self, name):
         try:
-            faceProxy = ALProxy("ALFaceDetection", IP, PORT)
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
         except Exception, e:
             print "Error when creating face detection proxy:"
             print str(e)
+        
+        #print "Actual DB: %s" % (faceProxy.getLearnedFacesList()) 
+        if (faceProxy.learnFace(name)):
+            print "Learning is complete"
+        else:
+            print "Something went wrong"
 
-        # TODO Finish this function
+    def clear_facedb(self):
+        try:
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
+        except Exception, e:
+            print "Error when creating face detection proxy:"
+            print str(e) 
+        
+        #print "Actual DB: %s" % (faceProxy.getLearnedFacesList()) 
+        if (faceProxy.clearDatabase()):
+            print "DB cleared"
+        else:
+            print "Something went wrong"
 
 
     def demo(self):
         return 0
 
-
     def faceTracker(self):
-
         try:
-            motion = ALProxy("ALMotion", IP, PORT)
+            motion = ALProxy("ALMotion", self.ip, self.port)
         except Exception, e:
             print "Could not create proxy to ALMotion!"
             print "Error was: ", e
             return
 
         try:
-            tracker = ALProxy("ALTracker", IP, PORT)
+            tracker = ALProxy("ALTracker", self.ip, self.port)
         except Exception, e:
             print "Could not create proxy to ALTracker!"
             print "Error was: ", e
             return
 
-         # Add target to track.
+        # Add target to track.
         tracker.setMode('Move')
         targetName = "Face"
         faceWidth = 0.1
@@ -79,7 +90,6 @@ class AssistentAgent:
 
         try:
             while True:
-
                 # TODO TESTEN!!!!
                 if tracker.isNewTargetDetected():
                     # Stop tracker.
@@ -98,7 +108,6 @@ class AssistentAgent:
 
 
     def move(self, X, Y):
-
         try:
             motionProxy  = ALProxy("ALMotion", self.ip, self.port)
             postureProxy = ALProxy("ALRobotPosture", self.ip, self.port)
@@ -128,7 +137,6 @@ class AssistentAgent:
 
 
     def say(self, text):
-
         try:
             tts = ALProxy("ALTextToSpeech", self.ip, self.port)
             tts.say(text)
@@ -138,9 +146,8 @@ class AssistentAgent:
             print "Error was: ", e
 
 
+    ### Make a proxy to nao's ALFaceDetection and enable/disable tracking.
     def set_nao_face_detection_tracking(nao_ip, nao_port, tracking_enabled):
-        """Make a proxy to nao's ALFaceDetection and enable/disable tracking.
-        """
         try:
             faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
         except Exception, e:
@@ -155,8 +162,8 @@ class AssistentAgent:
         print "Is tracking now enabled on the robot?", faceProxy.isTrackingEnabled()
 
 
+    ### let nao do a motion based on the state
     def motion(self, state):
-
         try:
             motionProxy = ALProxy("ALMotion", self.ip, self.port)
             detector.terminate()
@@ -174,20 +181,9 @@ class AssistentAgent:
             print "Error was: ", e
 
 
-    # -----------------------------------------------------------------------
-    # let nao do a motion based on the state
-
-    def faceLearning(self):
-
-        try:
-            faceProxy = ALProxy("ALFaceDetection", IP, PORT)
-        except Exception, e:
-            print "Error when creating face detection proxy:"
-            print str(e)
-
-        # TODO Finish this function
-
-
+#=============================================================
+# INSECURE CODE SNIPPETS - NOT SURE IF NEEDED - END IS MARKED
+#=============================================================
     def keyframes(self):
 
         try:
@@ -231,12 +227,12 @@ class AssistentAgent:
         except Exception, e:
             print "Could not create proxy to ALRobotPosture"
             print "Error was: ", e
+#=============================================================
+# END OF INSECURE CODE SNIPPETS
+#=============================================================
 
-
-    #------------------------------------------------------------------------
-
+### MAIN-FUNCTION OF THIS PROJECT
 if __name__ =='__main__':
-
     # parameter for naobot
     if len(sys.argv) <= 1:
         print "USAGE: python project.py <robotIP>"
@@ -247,38 +243,65 @@ if __name__ =='__main__':
 
     # TODO: print statements in nao.say()
     while True:
-
-        print "I listen hotword... sir"
-        nao.say('waiting for a hotword!')
+        print "Waiting for Keyword"
+        nao.say('awaiting keyword!')
         try:
-            hotword = nao.speech_recognize(1.0).lower()
-            print "You said: " + hotword
-            if hotword == "alexa":
-                print "I listen for command... sir"
+            keyword = nao.speech_recognize(1.0).lower()
+            print "You said: " + keyword
+            if keyword == "alexa":
+                print "Listening..."
                 nao.say('listen for a command!')
                 try:
                     command = nao.speech_recognize(2.0).lower()
                     print "You said: " + command
 
+                    # test speech capabilities of NAO
                     if command == 'hello':
                         nao.say('hello, sir!')
 
+                    # wakeup NAO - goto motion standInit
                     elif command == 'wake up':
                         nao.motion('wakeUp')
 
+                    # execute face_learning phase
+                    elif command == 'learn new face':
+                        # TODO: NEEDS TO BE TESTED
+                        nao.say('position yourself in front of my cameras.')
+                        nao.say('say ok when you are ready')
+                        resp = nao.speech_recognize(2.0).lower()
+                        if resp == 'ok':
+                            nao.say('tell me your name')
+                            name = nao.speech_recognize(1.0).lower()
+                            nao.learn_face(name)
+                        else:
+                            nao.say('oh oh something went wrong')
+
+                    # remove all faces from facedb
+                    elif command == 'clear all faces':
+                        # TODO: NEEDS TO BE TESTED
+                        nao.say('removing all faces from face database')
+                        nao.say('say ok if you really want that')
+                        resp = nao.speech_recognize(2.0).lower()
+                        if resp == 'ok':
+                            nao.clear_facedb(name)
+                            nao.say('database cleared')
+                        else:
+                            nao.say('oh oh something went wrong')
+
+                    # run the demonstration of the project
+                    elif command == 'start demo':
+                        # TODO
+
+                    # stop processing and let NAO rest
                     elif command == "stop":
                         nao.say('ok, i will rest now!')
                         nao.motion('rest')
                         break
 
-                    elif command == 'start face learning':
-                        # TODO
-
-                    elif command == 'start demo':
-                        # TODO
                 except Exception as e:
-                    nao.say('Sorry, i do not understand what you want from me.')
+                    nao.say('I dont know')
                     print 'WTF ... NONETYPE'
+                    print e
         except Exception as e:
-            print 'not alexa!!!'
+            print 'Keyword not recognized!!!'
             print e
