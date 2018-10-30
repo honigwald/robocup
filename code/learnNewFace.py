@@ -14,7 +14,7 @@ except Exception, e:
   exit(1)
 
 ### get the name
-newName = "theGirl"
+newName = "simon"
 
 print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
 

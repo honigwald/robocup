@@ -11,7 +11,7 @@ import time
 from naoqi import ALProxy
 
 # Replace this with your robot's IP address
-IP = "10.0.252.91"
+IP = "10.0.7.103"
 PORT = 9559
 
 # Create a proxy to ALFaceDetection
