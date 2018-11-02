@@ -9,16 +9,13 @@ import sys
 import time
 from naoqi import ALProxy
 from hello import *
-import json
 import speech_recognition as sr
 
 
 class AssistentAgent:
-
-    port = 9559
-
-    def __init__(self, ip):
+    def __init__(self, ip, port):
         self.ip = ip
+        self.port = port
         self.r = sr.Recognizer()
 
     def speech_recognize(self, time):
@@ -279,13 +276,15 @@ class AssistentAgent:
 
 ### MAIN-FUNCTION OF THIS PROJECT
 if __name__ =='__main__':
-    # parameter for naobot
+    # get cli parameter
     if len(sys.argv) <= 1:
         print "USAGE: python project.py <robotIP>"
     else:
         nao_ip = sys.argv[1]
-
-    nao = AssistentAgent(nao_ip)
+    
+    # initializing connection to naobot
+    port = 9559
+    nao = AssistentAgent(nao_ip, port)
 
     # TODO: print statements in nao.say()
     while True:
