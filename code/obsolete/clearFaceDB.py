@@ -2,7 +2,7 @@ import time
 from naoqi import ALProxy
 
 # Replace this with your robot's IP address
-IP = "10.0.7.103"
+IP = "10.0.7.16"
 PORT = 9559
 
 # Create a proxy to ALFaceDetection
@@ -14,10 +14,10 @@ except Exception, e:
   exit(1)
 
 print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
-
+'''
 if (faceProxy.clearDatabase()):
     print "DB cleared"
 else:
     print "Something went wrong"
-
+'''
 print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
