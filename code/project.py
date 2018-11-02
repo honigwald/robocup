@@ -34,7 +34,8 @@ class AssistentAgent:
                 print e
                 return 'what do you mean? i do not understand'
 
-    def learn_face(self, name):
+    #def learn_face(self, name):
+    def flearn(self, name):
         try:
             faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
         except Exception, e:
@@ -47,7 +48,8 @@ class AssistentAgent:
         else:
             print "Something went wrong"
 
-    def clear_facedb(self):
+    #def clear_facedb(self):
+    def fcleardb(self):
         try:
             faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
         except Exception, e:
@@ -59,6 +61,50 @@ class AssistentAgent:
             print "DB cleared"
         else:
             print "Something went wrong"
+
+    def fidentify(self):
+        try:
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
+        except Exception, e:
+            print "Error when creating face detection proxy:"
+            print str(e) 
+
+        period = 500
+        faceProxy.subscribe("Test_Face", period, 0.0 )
+        
+        # ALMemory variable where the ALFaceDetection module
+        # outputs its results.
+        memValue = "FaceDetected"
+        
+        # Create a proxy to ALMemory
+        try:
+            memoryProxy = ALProxy("ALMemory", IP, PORT)
+        except Exception, e:
+            print "Error when creating memory proxy:"
+            print str(e)
+            exit(1)
+
+        val = memoryProxy.getData(memValue, 0)
+        if(val and isinstance(val, list) and len(val) == 5):
+            # We detected faces !
+            # For each face, we can read its shape info and ID.
+            # First Field = TimeStamp.
+            timeStamp = val[0]
+            # Second Field = array of face_Info's.
+            faceInfoArray = val[1]
+            
+            ### THIS IS IMPORTANT
+            ### DETERMINING THE NAME OF RECOGNIZED PERSON
+            print "Name of recognized Person: %s" % val[1][0][1][2]
+            name = val[1][0][1][2]
+            if name != '':
+                name = "unknown"
+        else:
+            print "Error with getData. ALValue = %s" % (str(val))
+            # Unsubscribe the module.
+
+        faceProxy.unsubscribe("Test_Face")
+        return name
 
 
     def demo(self):
@@ -266,13 +312,14 @@ if __name__ =='__main__':
                     # execute face_learning phase
                     elif command == 'learn new face':
                         # TODO: NEEDS TO BE TESTED
+                        # RESULT: Voice speed has to slow down!
                         nao.say('position yourself in front of my cameras.')
                         nao.say('say ok when you are ready')
                         resp = nao.speech_recognize(2.0).lower()
                         if resp == 'ok':
                             nao.say('tell me your name')
                             name = nao.speech_recognize(1.0).lower()
-                            nao.learn_face(name)
+                            nao.flearn(name)
                         else:
                             nao.say('oh oh something went wrong')
 
@@ -283,7 +330,7 @@ if __name__ =='__main__':
                         nao.say('say ok if you really want that')
                         resp = nao.speech_recognize(2.0).lower()
                         if resp == 'ok':
-                            nao.clear_facedb(name)
+                            nao.fcleardb(name)
                             nao.say('database cleared')
                         else:
                             nao.say('oh oh something went wrong')
