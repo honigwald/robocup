@@ -11,7 +11,7 @@ import time
 from naoqi import ALProxy
 
 # Replace this with your robot's IP address
-IP = "10.0.7.103"
+IP = "10.0.7.16"
 PORT = 9559
 
 # Create a proxy to ALFaceDetection
@@ -45,43 +45,43 @@ learnedFaces = faceProxy.getLearnedFacesList()
 for face in learnedFaces:
     print face
 
-
-
-
-'''
 # A simple loop that reads the memValue and checks whether faces are detected.
 for i in range(0, 20):
-  time.sleep(0.5)
-  val = memoryProxy.getData(memValue, 0)
-  print ""
-  print "\*****"
-  print ""
+    time.sleep(0.5)
+    val = memoryProxy.getData(memValue, 0)
+    print ""
+    print "\*****"
+    print ""
 
-# Check whether we got a valid output: a list with two fields.
-if(val and isinstance(val, list) and len(val) == 2):
-  # We detected faces !
-  # For each face, we can read its shape info and ID.
-  # First Field = TimeStamp.
-  timeStamp = val[0]
-  # Second Field = array of face_Info's.
-  faceInfoArray = val[1]
-
-  try:
-  # Browse the faceInfoArray to get info on each detected face.
-    for faceInfo in faceInfoArray:
-    # First Field = Shape info.
-    faceShapeInfo = faceInfo[0]
-    # Second Field = Extra info (empty for now).
-    faceExtraInfo = faceInfo[1]
-    print "  faceID: %f" % (faceExtraInfo[0])
-  except Exception, e:
-    print "faces detected, but it seems getData is invalid. ALValue ="
-    print val
-    print "Error msg %s" % (str(e))
-else:
-  print "Error with getData. ALValue = %s" % (str(val))
-  # Unsubscribe the module.
-'''
+    # Check whether we got a valid output: a list with two fields.
+    print len(val)
+    if(val and isinstance(val, list) and len(val) == 5):
+        # We detected faces !
+        # For each face, we can read its shape info and ID.
+        # First Field = TimeStamp.
+        timeStamp = val[0]
+        # Second Field = array of face_Info's.
+        faceInfoArray = val[1]
+        
+        ### THIS IS IMPORTANT
+        ### DETERMINING THE NAME OF RECOGNIZED PERSON
+        print "Name of recognized Person: %s" % val[1][0][1][2]
+        
+        try:
+        # Browse the faceInfoArray to get info on each detected face.
+            for faceInfo in faceInfoArray:
+                # First Field = Shape info.
+                faceShapeInfo = faceInfo[0]
+                # Second Field = Extra info (empty for now).
+                faceExtraInfo = faceInfo[1]
+                print "  faceID: %f" % (faceExtraInfo[0])
+        except Exception, e:
+            print "faces detected, but it seems getData is invalid. ALValue ="
+            #print val
+            print "Error msg %s" % (str(e))
+        else:
+            print "Error with getData. ALValue = %s" % (str(val))
+            # Unsubscribe the module.
 
 faceProxy.unsubscribe("Test_Face")
 print "Test terminated successfully."
