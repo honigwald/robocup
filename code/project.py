@@ -11,7 +11,6 @@ from naoqi import ALProxy
 from hello import *
 import speech_recognition as sr
 
-
 class AssistentAgent:
     def __init__(self, ip, port):
         self.ip = ip
@@ -38,7 +37,7 @@ class AssistentAgent:
         except Exception, e:
             print "Error when creating face detection proxy:"
             print str(e)
-        
+
         #print "Actual DB: %s" % (faceProxy.getLearnedFacesList()) 
         if (faceProxy.learnFace(name)):
             print "Learning is complete"
@@ -52,7 +51,7 @@ class AssistentAgent:
         except Exception, e:
             print "Error when creating face detection proxy:"
             print str(e) 
-        
+
         #print "Actual DB: %s" % (faceProxy.getLearnedFacesList()) 
         if (faceProxy.clearDatabase()):
             print "DB cleared"
@@ -68,11 +67,11 @@ class AssistentAgent:
 
         period = 500
         faceProxy.subscribe("Test_Face", period, 0.0 )
-        
+
         # ALMemory variable where the ALFaceDetection module
         # outputs its results.
         memValue = "FaceDetected"
-        
+
         # Create a proxy to ALMemory
         try:
             memoryProxy = ALProxy("ALMemory", IP, PORT)
@@ -89,7 +88,7 @@ class AssistentAgent:
             timeStamp = val[0]
             # Second Field = array of face_Info's.
             faceInfoArray = val[1]
-            
+
             ### THIS IS IMPORTANT
             ### DETERMINING THE NAME OF RECOGNIZED PERSON
             print "Name of recognized Person: %s" % val[1][0][1][2]
@@ -311,7 +310,7 @@ if __name__ =='__main__':
                     # execute face_learning phase
                     elif command == 'learn new face':
                         # TODO: NEEDS TO BE TESTED
-                        # RESULT: Voice speed has to slow down!
+                        # RESULT: Voice speed has to slowdown!
                         nao.say('position yourself in front of my cameras.')
                         nao.say('say ok when you are ready')
                         resp = nao.speech_recognize(2.0).lower()
@@ -337,6 +336,7 @@ if __name__ =='__main__':
                     # run the demonstration of the project
                     elif command == 'start demo':
                         # TODO
+                        print "todo"
 
                     # stop processing and let NAO rest
                     elif command == "stop":
