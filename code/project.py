@@ -30,6 +30,22 @@ class AssistentAgent:
                 print e
                 return 'what do you mean? i do not understand'
 
+    def face(self, state):
+        try:
+            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
+        except Exception, e:
+            print "Error when creating face detection proxy:"
+            print str(e)
+
+        if state == 'learn':
+            self.say('Tell me your name')
+            name = self.speech_recognize(1.0).lower()
+
+        elif state == 'cleardb':
+        elif state == 'identify':
+
+
+
     #def learn_face(self, name):
     def flearn(self, name):
         try:
@@ -103,51 +119,45 @@ class AssistentAgent:
         return name
 
 
-    def demo(self):
-        return 0
+    def rundemo(self):
+        #TODO
+        print "Demo is running"
+        self.motion('wakeUp')
+        self.tracker('start')
 
-    def faceTracker(self):
-        try:
-            motion = ALProxy("ALMotion", self.ip, self.port)
-        except Exception, e:
-            print "Could not create proxy to ALMotion!"
-            print "Error was: ", e
-            return
+        for i in 20:
+            self.tracker('check')
+            time.sleep(1)
+        self.tracker('stop')
 
+        self.motion('rest')
+        print "Demo is finished"
+
+    def tracker(self, state):
         try:
             tracker = ALProxy("ALTracker", self.ip, self.port)
         except Exception, e:
             print "Could not create proxy to ALTracker!"
             print "Error was: ", e
-            return
 
-        # Add target to track.
-        tracker.setMode('Move')
-        targetName = "Face"
-        faceWidth = 0.1
-        tracker.registerTarget(targetName, faceWidth)
+        if state == "start":
+            targetName = "Face"
+            faceWidth = 0.1
+            tracker.setMode('Head')
+            tracker.registerTarget(targetName, faceWidth)
 
-        # Then, start tracker.
-        tracker.track(targetName)
+            # Then, start tracker.
+            tracker.track(targetName)
 
-        try:
-            while True:
-                # TODO TESTEN!!!!
-                if tracker.isNewTargetDetected():
-                    # Stop tracker.
-                    tracker.stopTracker()
-                    tracker.unregisterAllTargets()
-                    motion.rest()
-                    break
+        elif state == "check":
+            if tracker.isNewTargetDetected():
+                print "new target detected"
+            else:
+                print "no target"
 
-                else:
-                    time.sleep(1)
-
-        except KeyboardInterrupt:
-            print
-            print "Interrupted by user"
-            print "Stopping..."
-
+        elif state == "stop":
+            tracker.stopTracker()
+            tracker.unregisterAllTargets()
 
     def move(self, X, Y):
         try:
@@ -211,11 +221,9 @@ class AssistentAgent:
             detector.terminate()
 
             if state == 'wakeUp':
-                self.say('ok')
                 motionProxy.wakeUp()
 
             elif state == 'rest':
-                self.say('ok')
                 motionProxy.rest()
 
         except Exception, e:
@@ -294,14 +302,14 @@ if __name__ =='__main__':
             print "You said: " + keyword
             if keyword == "alexa":
                 print "Listening..."
-                nao.say('listen for a command!')
+                nao.say('listening')
                 try:
                     command = nao.speech_recognize(2.0).lower()
                     print "You said: " + command
 
                     # test speech capabilities of NAO
                     if command == 'hello':
-                        nao.say('hello, sir!')
+                        nao.say('hello')
 
                     # wakeup NAO - goto motion standInit
                     elif command == 'wake up':
@@ -336,7 +344,8 @@ if __name__ =='__main__':
                     # run the demonstration of the project
                     elif command == 'start demo':
                         # TODO
-                        print "todo"
+                        nao.say('starting demo')
+                        nao.rundemo()
 
                     # stop processing and let NAO rest
                     elif command == "stop":
