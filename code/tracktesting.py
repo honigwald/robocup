@@ -6,6 +6,17 @@ import json
 
 ip = sys.argv[1]
 port = 9559
+
+
+try:
+    tts = ALProxy("ALTextToSpeech", ip, port)
+    tts.say('Hello')
+
+except Exception, e:
+    print "Could not create proxy to ALTextToSpeech!"
+    print "Error was: ", e
+
+
 try:
     motion = ALProxy("ALMotion", ip, port)
 except Exception, e:
@@ -39,11 +50,13 @@ try:
         if tracker.isNewTargetDetected():
             print "new target detected"
             position = tracker.getRelativePosition()
-            tracker.setRelativePosition(position)
+            print position
+            p = tracker.setRelativePosition(position)
+
 #            break
         else:
             print "no target"
-        time.sleep(1)
+        time.sleep(3)
 
 except KeyboardInterrupt:
     print
