@@ -43,7 +43,6 @@ class AssistentAgent:
             print "Error when creating face detection proxy:"
             print str(e)
 
-
     ### Controlling facerecognition API
     def face(self, state):
         try:
@@ -53,25 +52,20 @@ class AssistentAgent:
             print str(e)
 
         if state == 'learn':
-            self.say('Tell me your name')
+            self.say('Whats your name')
             name = self.speech_recognize(1.0).lower()
-            print name
-            print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
-            o = faceProxy.learnFace(str(name))
-            print o
-            print "done"
-            #if (faceProxy.learnFace(name)):
-            #    print "Learning is complete"
-            #    self.say('Thank you')
-            #else:
-            #    print "Something went wrong"
+            if (faceProxy.learnFace(str(name))):
+                print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
+                self.say('Thank you')
+            else:
+                print "Something went wrong"
         elif state == 'cleardb':
             if (faceProxy.clearDatabase()):
                 print "DB cleared"
                 print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
             else:
                 print "Something went wrong"
-        elif state == 'identify':
+        elif state == 'getname':
             period = 500
             faceProxy.subscribe("Test_Face", period, 0.0 )
             memValue = "FaceDetected"
@@ -85,13 +79,6 @@ class AssistentAgent:
 
             val = memoryProxy.getData(memValue, 0)
             if(val and isinstance(val, list) and len(val) == 5):
-                # We detected faces !
-                # For each face, we can read its shape info and ID.
-                # First Field = TimeStamp.
-                timeStamp = val[0]
-                # Second Field = array of face_Info's.
-                faceInfoArray = val[1]
-
                 ### THIS IS IMPORTANT
                 ### DETERMINING THE NAME OF RECOGNIZED PERSON
                 print "Name of recognized Person: %s" % val[1][0][1][2]
@@ -111,15 +98,40 @@ class AssistentAgent:
         print "Demo is running"
         self.motion('wakeUp')
         self.tracker('start')
+        checked = []        # This array stores already greeted people
         for i in range(20):
-            self.tracker('check')
-            name = self.face('identify')
-            if name != 'unknown':
-                self.say('Hello')
-                self.say(name)
-            time.sleep(1)
+            # new target detected
+            if self.tracker('check'):
+                name = self.face('getname')
+                # check if target already recognized
+                if str(name) in checked:
+                    continue
+                else:
+                    # check if we know the name
+                    if name != 'unknown':
+                        self.say('Hello')
+                        self.say(name)
+                        ### TODO: MOVE YOUR ASS - ENSURE NOT TO GREET A 2nd TIME
+                    else:
+                        ### TODO: TESTING - DETECTED SOMEONE WHO IS NOT KNOWN
+                        self.say('Hello you!')
+                        self.say('Will u tell me your name.')
+                        time.sleep(1)
+                        self.say('Say yes or no') 
+                        if (str(nao.speech_recognize(1.0).lower() == 'yes')):
+                            self.say('ok')
+                            self.face('learn')
+                            self.say('thank u')
+                        else:
+                            self.say('awww. thats sad')
+                    time.sleep(1)
+                checked.append(name)
+            # no target
+            else:
+                ### TODO:MOVE YOUR BODY
+        
+        # finish the demo
         self.tracker('stop')
-
         self.motion('rest')
         print "Demo is finished"
 
@@ -136,24 +148,23 @@ class AssistentAgent:
             faceWidth = 0.1
             tracker.setMode('Move')
             tracker.registerTarget(targetName, faceWidth)
-
-            # Then, start tracker.
             tracker.track(targetName)
 
         elif state == "check":
             if tracker.isNewTargetDetected():
-                print "new target detected"
+                return True
             else:
-                print "no target"
+                return False
 
         elif state == "stop":
             tracker.stopTracker()
             tracker.unregisterAllTargets()
 
     ### Controlling the movement of nao
+    ### TODO: HERE WE'VE TO IMPLEMENT RANDOM MOVEMENT
     def move(self, X, Y):
         try:
-            motionProxy  = ALProxy("ALMotion", self.ip, self.port)
+            motionProxy = ALProxy("ALMotion", self.ip, self.port)
             postureProxy = ALProxy("ALRobotPosture", self.ip, self.port)
 
             # Wake up robot
@@ -183,81 +194,25 @@ class AssistentAgent:
     def say(self, text):
         try:
             tts = ALProxy("ALTextToSpeech", self.ip, self.port)
+            tts.setVolume(0.7)
             tts.say(text)
 
         except Exception, e:
             print "Could not create proxy to ALTextToSpeech!"
             print "Error was: ", e
-
-
-    ### Make a proxy to nao's ALFaceDetection and enable/disable tracking.
-    def set_nao_face_detection_tracking(nao_ip, nao_port, tracking_enabled):
-        try:
-            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
-        except Exception, e:
-            print e
-
-        print "Will set tracking to '%s' on the robot ..." % tracking_enabled
-
-        # Enable or disable tracking.
-        faceProxy.enableTracking(tracking_enabled)
-
-        # Just to make sure correct option is set.
-        print "Is tracking now enabled on the robot?", faceProxy.isTrackingEnabled()
-
-
-
-
-
-#=============================================================
-# INSECURE CODE SNIPPETS - NOT SURE IF NEEDED - END IS MARKED
-#=============================================================
-    def keyframes(self):
+'''
+    ### Nao speaks given text with emotions ;)
+    def esay(self, text):
 
         try:
-            motionProxy = ALProxy("ALMotion", self.ip, self.port)
+            atts = ALProxy("ALAnimatedSpeech", self.ip, self.port)
+            atts.
+
         except Exception, e:
-            print "Could not create proxy to ALRobotPosture"
+            print "Could not create proxy to ALTextToSpeech!"
             print "Error was: ", e
+'''
 
-        # Constraint Balance Motion
-        #isEnable   = True
-        #supportLeg = "Legs"
-        #proxy.wbEnableBalanceConstraint(isEnable, supportLeg)
-
-        '''
-        names      = ["LElbowYaw"]
-        angleLists = [[1.9, -0.5, 1.9, -0.5]]
-        times      = [[1.0,  4.0, 9.0,  13.0]]
-        isAbsolute = True
-        motionProxy.angleInterpolation(names, angleLists, times, isAbsolute)
-        '''
-
-        names, times, keys = hello()
-        isAbsolute = True
-        motionProxy.angleInterpolation(names, keys, times, isAbsolute)
-
-        '''
-        names      = ["LShoulderPitch", "LElbowYaw"]
-        angleLists = [[1.9, -0.5, 1.9, -0.5],[-1.0,  -0.2, -1.0,  -0.4]]
-        times      = [[1.0,  4.0, 9.0,  13.0],[5.0,  6.0, 7.0,  8.0]]
-        isAbsolute = True
-        motionProxy.angleInterpolation(names, angleLists, times, isAbsolute)
-        '''
-
-
-    # simple example for build-in posture
-    def posture(self, posture):
-
-        try:
-            postureProxy = ALProxy("ALRobotPosture", self.ip, self.port)
-            postureProxy.goToPosture(posture, 1.0)
-        except Exception, e:
-            print "Could not create proxy to ALRobotPosture"
-            print "Error was: ", e
-#=============================================================
-# END OF INSECURE CODE SNIPPETS
-#=============================================================
 
 ### MAIN-FUNCTION OF THIS PROJECT
 if __name__ =='__main__':
@@ -271,10 +226,8 @@ if __name__ =='__main__':
     port = 9559
     nao = AssistentAgent(nao_ip, port)
 
-    # TODO: print statements in nao.say()
     nao.say('awaiting keyword!')
-    nao.move(0.8, 0.4)
-    '''
+    #nao.move(0.8, 0.4)
     while True:
         print "Waiting for Keyword"
         try:
@@ -291,6 +244,7 @@ if __name__ =='__main__':
                     if command == 'hello':
                         nao.say('hello')
 
+                    # get stored faces
                     elif command == 'database'
                         nao.face('getdb')
 
@@ -302,33 +256,34 @@ if __name__ =='__main__':
                     elif command == 'new person':
                         # TODO: NEEDS TO BE TESTED
                         # RESULT: Voice speed has to slowdown!
-                        nao.say('position yourself in front of my cameras.')
+                        nao.say('position yourself in front me')
+                        time.sleep(1)
                         nao.say('say ok when you are ready')
                         resp = nao.speech_recognize(2.0).lower()
                         print resp
                         if resp == 'ok':
                             nao.face('learn')
                         else:
-                            nao.say('oh oh something went wrong')
+                            nao.say('oh something went wrong')
 
                     # remove all faces from facedb
                     elif command == 'reset':
-                        # TODO: NEEDS TO BE TESTED
-                        nao.say('removing all faces from face database')
-                        nao.say('say ok if you really want that')
+                        nao.say('removing all faces from database')
+                        nao.say('say ok to process')
                         resp = nao.speech_recognize(2.0).lower()
                         if resp == 'ok':
                             nao.face('cleardb')
                             nao.say('database cleared')
                         else:
-                            nao.say('oh oh something went wrong')
+                            nao.say('oh something went wrong')
 
                     # run the demonstration of the project
                     elif command == 'test':
-                        # TODO
+                        # TODO: RUNDEMO STILL NOT FINISHED - WE'RE MAKING PROGRESS
                         nao.say('starting demo')
                         nao.rundemo()
 
+                    # NAO will rest
                     elif command == 'rest'
                         nao.motion('rest')
 
@@ -345,4 +300,3 @@ if __name__ =='__main__':
         except Exception as e:
             print 'Keyword not recognized!!!'
             print e
-            '''
