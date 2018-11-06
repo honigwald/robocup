@@ -24,7 +24,7 @@ motion.wakeUp()
 # Add target to track.
 targetName = "Face"
 faceWidth = 0.1
-tracker.setMode('Head')
+tracker.setMode('Move')
 tracker.registerTarget(targetName, faceWidth)
 
 # Then, start tracker.
@@ -38,6 +38,8 @@ try:
         # TODO TESTEN!!!!
         if tracker.isNewTargetDetected():
             print "new target detected"
+            position = tracker.getRelativePosition()
+            tracker.setRelativePosition(position)
 #            break
         else:
             print "no target"

@@ -50,41 +50,41 @@ class AssistentAgent:
             if (faceProxy.clearDatabase()):
                 print "DB cleared"
                 self.say('Database cleared')
-                else:
-                    print "Something went wrong"
-            elif state == 'identify':
-                period = 500
-                faceProxy.subscribe("Test_Face", period, 0.0 )
-                memValue = "FaceDetected"
-                try:
-                    memoryProxy = ALProxy("ALMemory", self.ip, self.port)
-                except Exception, e:
-                    print "Error when creating memory proxy:"
-                    print str(e)
-                    exit(1)
+            else:
+                print "Something went wrong"
+        elif state == 'identify':
+            period = 500
+            faceProxy.subscribe("Test_Face", period, 0.0 )
+            memValue = "FaceDetected"
+            try:
+                memoryProxy = ALProxy("ALMemory", self.ip, self.port)
+            except Exception, e:
+                print "Error when creating memory proxy:"
+                print str(e)
+                exit(1)
 
-                val = memoryProxy.getData(memValue, 0)
-                if(val and isinstance(val, list) and len(val) == 5):
-                    # We detected faces !
-                    # For each face, we can read its shape info and ID.
-                    # First Field = TimeStamp.
-                    timeStamp = val[0]
-                    # Second Field = array of face_Info's.
-                    faceInfoArray = val[1]
+            val = memoryProxy.getData(memValue, 0)
+            if(val and isinstance(val, list) and len(val) == 5):
+                # We detected faces !
+                # For each face, we can read its shape info and ID.
+                # First Field = TimeStamp.
+                timeStamp = val[0]
+                # Second Field = array of face_Info's.
+                faceInfoArray = val[1]
 
-                    ### THIS IS IMPORTANT
-                    ### DETERMINING THE NAME OF RECOGNIZED PERSON
-                    print "Name of recognized Person: %s" % val[1][0][1][2]
-                    name = val[1][0][1][2]
-                    if name != '':
-                        name = "unknown"
-                else:
-                    print "Error with getData. ALValue = %s" % (str(val))
-            
-                # Unsubscribe the module.
-                faceProxy.unsubscribe("Test_Face")
-                return name
-        
+                ### THIS IS IMPORTANT
+                ### DETERMINING THE NAME OF RECOGNIZED PERSON
+                print "Name of recognized Person: %s" % val[1][0][1][2]
+                name = val[1][0][1][2]
+                if name != '':
+                    name = "unknown"
+            else:
+                print "Error with getData. ALValue = %s" % (str(val))
+
+            # Unsubscribe the module.
+            faceProxy.unsubscribe("Test_Face")
+            return name
+
         ### The final demonstration of the project
         def rundemo(self):
             #TODO: Actually it's just some small testing here
@@ -103,7 +103,7 @@ class AssistentAgent:
 
             self.motion('rest')
             print "Demo is finished"
-        
+
         ### Controlling the facetracking function of nao
         def tracker(self, state):
             try:
@@ -131,7 +131,7 @@ class AssistentAgent:
                 tracker.stopTracker()
                 tracker.unregisterAllTargets()
 
-        ### Controlling the movement of nao 
+        ### Controlling the movement of nao
         def move(self, X, Y):
         try:
             motionProxy  = ALProxy("ALMotion", self.ip, self.port)
@@ -261,7 +261,7 @@ if __name__ =='__main__':
         print "USAGE: python project.py <robotIP>"
     else:
         nao_ip = sys.argv[1]
-    
+
     # initializing connection to naobot
     port = 9559
     nao = AssistentAgent(nao_ip, port)
