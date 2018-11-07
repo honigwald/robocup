@@ -7,6 +7,7 @@ USAGE:
 
 import sys
 import time
+import math
 from naoqi import ALProxy
 from hello import *
 import speech_recognition as sr
@@ -16,7 +17,7 @@ class AssistentAgent:
         self.ip = ip
         self.port = port
         self.r = sr.Recognizer()
-
+    
     def speech_recognize(self, time):
         with sr.Microphone() as source:
             self.r.adjust_for_ambient_noise(source)
@@ -30,18 +31,24 @@ class AssistentAgent:
                 print e
                 return 'what do you mean? i do not understand'
 
+    ### Goto predefined motions
     def motion(self, state):
         try:
-            motionProxy = ALProxy("ALMotion", self.ip, self.port)
-
-            if state == 'wakeUp':
-                motionProxy.wakeUp()
-            elif state == 'rest':
-                motionProxy.rest()
-
+            motion = ALProxy("ALMotion", self.ip, self.port)
         except Exception, e:
             print "Error when creating face detection proxy:"
             print str(e)
+
+        if state == 'wakeUp':
+            motion.wakeUp()
+        elif state == 'rest':
+            motion.rest()
+        elif state == 'lookUp':
+            joint  = ["HeadPitch"]
+            angle  = [-0.2]                 # angle is in radian (convert to deg=x/180*PI)
+            fractionMaxSpeed  = 0.2
+            motion.setAngles(joint, angle, fractionMaxSpeed)
+
 
     ### Controlling facerecognition API
     def face(self, state):
@@ -50,24 +57,41 @@ class AssistentAgent:
         except Exception, e:
             print "Error when creating face detection proxy:"
             print str(e)
-
+        
+        # store recognized face with given name in database
         if state == 'learn':
-            self.say('Whats your name')
-            name = self.speech_recognize(1.0).lower()
-            if (faceProxy.learnFace(str(name))):
-                print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
-                self.say('Thank you')
-            else:
-                print "Something went wrong"
+            while True:                     # loops until NAO understood the correct name
+                self.say('Whats your name')
+                name = self.speech_recognize(1.0).lower()
+                name = str(name)
+                self.say('Is')
+                self.say(name)
+                self.say('correct. say yes')
+                resp = self.speech_recognize(1.0).lower()
+                resp = str(resp)
+                if resp == 'yes':           # finally learn face-name-tuple
+                    if faceProxy.learnFace(name):
+                        print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
+                        self.say('Thank you')
+                        break
+                    else:
+                        self.say('Oh I had a problem')
+                        print "Something went wrong"
+                elif resp == 'stop':
+                    break
+
+        # remove all names stored in database
         elif state == 'cleardb':
             if (faceProxy.clearDatabase()):
                 print "DB cleared"
                 print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
             else:
                 print "Something went wrong"
+
+        # returns the name of recognized person
         elif state == 'getname':
             period = 500
-            faceProxy.subscribe("Test_Face", period, 0.0 )
+            faceProxy.subscribe("face", period, 0.0 )
             memValue = "FaceDetected"
             name = "unknown"
             try:
@@ -81,56 +105,59 @@ class AssistentAgent:
             if(val and isinstance(val, list) and len(val) == 5):
                 ### THIS IS IMPORTANT
                 ### DETERMINING THE NAME OF RECOGNIZED PERSON
-                print "Name of recognized Person: %s" % val[1][0][1][2]
                 name = val[1][0][1][2]
+                print "Name of recognized Person: %s" % name
             else:
                 print "Error with getData. ALValue = %s" % (str(val))
-
-            # Unsubscribe the module.
-            faceProxy.unsubscribe("Test_Face")
+            
+            faceProxy.unsubscribe("face")   # Unsubscribe the module.
             return name
+
+        # prints content of database
         elif state == 'getdb':
             print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
 
     ### The final demonstration of the project
     def rundemo(self):
-        #TODO: Actually it's just some small testing here
         print "Demo is running"
+
+        ### initialize NAO for the demonstration
         self.motion('wakeUp')
+        self.motion('lookUp')
         self.tracker('start')
-        checked = []        # This array stores already greeted people
+        checked = []                        # This array stores already greeted people
+
         for i in range(20):
-            # new target detected
-            if self.tracker('check'):
-                name = self.face('getname')
-                # check if target already recognized
-                if str(name) in checked:
+            if self.tracker('check'):       # check if a new target is detected
+                name = self.face('getname') 
+                if str(name) in checked:    # check if target already recognized
                     continue
                 else:
-                    # check if we know the name
-                    if name != 'unknown':
-                        self.say('Hello')
-                        self.say(name)
+                    if name != 'unknown':   # check if we know the name 
+                        self.animated('hello', name)
+                        #self.say('Hello')
+                        #self.say(name)
                         ### TODO: MOVE YOUR ASS - ENSURE NOT TO GREET A 2nd TIME
                     else:
                         ### TODO: TESTING - DETECTED SOMEONE WHO IS NOT KNOWN
-                        self.say('Hello you!')
-                        self.say('Will u tell me your name.')
+                        self.say('hello you!')
+                        self.say('will u tell me your name.')
                         time.sleep(1)
-                        self.say('Say yes or no') 
-                        if (str(nao.speech_recognize(1.0).lower() == 'yes')):
+                        self.say('then say yes') 
+                        resp = nao.speech_recognize(1.0).lower()
+                        resp = str(resp)
+                        if resp == 'yes')): # start learning
                             self.say('ok')
                             self.face('learn')
-                            self.say('thank u')
-                        else:
+                        else:               # person won't tell his name
                             self.say('awww. thats sad')
                     time.sleep(1)
-                checked.append(name)
-            # no target
+                checked.append(name)        # add name to already greet
+            # no target detected
             else:
-                ### TODO:MOVE YOUR BODY
+                ### TODO: MOVE YOUR ASS
         
-        # finish the demo
+        # cleanup after finished demonstration
         self.tracker('stop')
         self.motion('rest')
         print "Demo is finished"
@@ -143,52 +170,51 @@ class AssistentAgent:
             print "Could not create proxy to ALTracker!"
             print "Error was: ", e
 
+        # start the tracker [modes: Head, Body, Move]
         if state == "start":
             targetName = "Face"
             faceWidth = 0.1
             tracker.setMode('Move')
             tracker.registerTarget(targetName, faceWidth)
             tracker.track(targetName)
-
+        
+        # return true if new target is detected
         elif state == "check":
             if tracker.isNewTargetDetected():
                 return True
             else:
                 return False
 
+        # stops the tracker and cleanup
         elif state == "stop":
             tracker.stopTracker()
             tracker.unregisterAllTargets()
 
     ### Controlling the movement of nao
     ### TODO: HERE WE'VE TO IMPLEMENT RANDOM MOVEMENT
-    def move(self, X, Y):
+    def move(self, cntrl, coords):
         try:
-            motionProxy = ALProxy("ALMotion", self.ip, self.port)
-            postureProxy = ALProxy("ALRobotPosture", self.ip, self.port)
+            motion = ALProxy("ALMotion", self.ip, self.port)
+            posture= ALProxy("ALRobotPosture", self.ip, self.port)
 
-            # Wake up robot
-            motionProxy.wakeUp()
-
-            # Send robot to Stand
-            postureProxy.goToPosture("StandInit", 0.5)
-
-            # go to position x, y
-            Theta = 0.5
-            Frequency = 0.5 # max speed
-            try:
-                motionProxy.moveToward(X, Y, Theta, [["Frequency", Frequency]])
-            except Exception, errorMsg:
-                print str(errorMsg)
-                print "This example is not allowed on this robot."
-                exit()
+            # Prepare NAO to walk
+            motion.wakeUp()
+            posture.goToPosture("StandInit", 0.5)
+            motion.standInit()
+            
+            # check which move to do
+            if cntrl = 'forward':
+                motion.moveTo(coords[0], 0, 0)
+            elif cntrl = 'backward':
+                motion.moveTo(-(coords[0]), 0, 0)
+            elif cntrl = 'turnleft':
+                theta = math.pi/2
+                motion.moveTo(coords[0], coords[1], theta)
 
             motionProxy.rest()
 
         except Exception, e:
             print e
-
-        return 0
 
     ### Nao speaks given text
     def say(self, text):
@@ -200,18 +226,20 @@ class AssistentAgent:
         except Exception, e:
             print "Could not create proxy to ALTextToSpeech!"
             print "Error was: ", e
-'''
-    ### Nao speaks given text with emotions ;)
-    def esay(self, text):
 
+    ### Nao speaks given text with emotions ;)
+    def animated(self, cntrl, text):
         try:
             atts = ALProxy("ALAnimatedSpeech", self.ip, self.port)
-            atts.
+
+            if cntrl = 'hello':
+                animation = '^start(animations/Stand/Gestures/Hey_1)'
+                string = 'hello' + animation + name
+                atts.say(string)
 
         except Exception, e:
             print "Could not create proxy to ALTextToSpeech!"
             print "Error was: ", e
-'''
 
 
 ### MAIN-FUNCTION OF THIS PROJECT
