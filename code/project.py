@@ -46,12 +46,8 @@ class AssistentAgent:
             motion.rest()
         elif state == 'moveHead' and joint != None and angle != None:
             # motion.setStiffnesses(joint, 1)
-            #joint  = ["HeadPitch"]
-            #angle  = [-0.2]                 # angle is in radian (convert to deg=x/180*PI)
             fractionMaxSpeed  = 0.2
             motion.setAngles(joint, angle, fractionMaxSpeed)
-            # motion.setStiffnesses(joint, 0)
-
 
     ### Controlling facerecognition API
     def face(self, state):
@@ -99,7 +95,6 @@ class AssistentAgent:
             period = 500
             faceProxy.subscribe("face", period, 0.0 )
             memValue = "FaceDetected"
-            name = "unknown"
             try:
                 memoryProxy = ALProxy("ALMemory", self.ip, self.port)
             except Exception, e:
@@ -112,9 +107,10 @@ class AssistentAgent:
                 ### THIS IS IMPORTANT
                 ### DETERMINING THE NAME OF RECOGNIZED PERSON
                 name = val[1][0][1][2]
-                print "Name of recognized Person: %s" % name
+                print "I know you: %s" % name
             else:
-                print "Error with getData. ALValue = %s" % (str(val))
+                print "Unkown person"
+                name = ''
 
             faceProxy.unsubscribe("face")   # Unsubscribe the module.
             return name
@@ -132,44 +128,53 @@ class AssistentAgent:
         self.motion('moveHead', 'HeadPitch', -0.6)
         self.tracker('start')
         checked = []                        # This array stores already greeted people
+        angleOfHeadYaw = -(math.pi)
 
-        for i in range(20):
-            if self.tracker('check'):       # check if a new target is detected
-                name = self.face('getname')
-                print name
-                print "Checked: %s" % checked
-                if str(name) in checked:    # check if target already recognized
+        for i in range(0,4):                            # outer loop - turn your body 90* left
+            j = 0
+            while j < 3:                                # inner loop - head looks from right 2center 2left
+                if self.tracker('check'):               # check if a target is detected
+                    name = self.face('getname')
+                    print name
                     print "Checked: %s" % checked
-                    angle = uniform(-2,2)
-                    self.motion('moveHead', 'HeadYaw', angle)
-                    continue
-                else:
-                    if name != 'unknown':   # check if we know the name
-                        self.animated('hello', name)
-                        #self.say('Hello')
-                        #self.say(name)
-                        ### TODO: MOVE YOUR ASS - ENSURE NOT TO GREET A 2nd TIME
-                        checked.append(name)        # add name to already greet
+                    if str(name) in checked:            # check if target already recognized
+                        print "Checked: %s" % checked
+                        continue
                     else:
-                        ### TODO: TESTING - DETECTED SOMEONE WHO IS NOT KNOWN
-                        self.say('hello you!')
-                        self.say('will u tell me your name.')
-                        time.sleep(1)
-                        self.say('then say yes')
-                        resp = nao.speech_recognize(1.0).lower()
-                        resp = str(resp)
-                        if resp == 'yes': # start learning
-                            self.say('ok')
-                            self.face('learn')
-                        else:               # person won't tell his name
-                            self.say('awww. thats sad')
+                        name = str(name)
+                        if name != '':                  # check if we have a name
+                            if name in checked:         # check if target already greeted
+                                continue
+                            else: 
+                                self.animated('hello', name)
+                                checked.append(name)    # mark name as greeted
+                        else:
+                            ### TODO: TESTING - DETECTED SOMEONE WHO IS NOT KNOWN
+                            self.say('hello')
+                            self.say('would you tell me your name')
+                            time.sleep(1)
+                            self.say('then say yes')
+                            resp = nao.speech_recognize(2.0).lower()
+                            resp = str(resp)
+                            if resp == 'yes':           # start learning
+                                self.face('learn')
+                            else:                       # person won't tell his name
+                                self.say('awww. thats sad')
+                        time.sleep(3)
+                # no target detected
+                else:
+                    # move head of NAO - in three steps from right to left
+                    angleOfHeadYaw = angleOfHeadYaw + (math.pi)/2
+                    self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
+                    j += 1
                     time.sleep(3)
-            # no target detected
-            else:
-                ### TODO: MOVE YOUR ASS
-                angle = uniform(-2,2)
-                self.motion('moveHead', 'HeadYaw', angle)
-                time.sleep(3)
+                ### --- END OF INNER LOOP --- ### 
+
+            # turn left in place
+            coords = [0.0, 0.0]
+            nao.move('turnleft', coords)
+            ### --- END OF OUTER LOOP --- ### 
+
         # cleanup after finished demonstration
         self.tracker('stop')
         self.motion('rest')
@@ -238,7 +243,7 @@ class AssistentAgent:
     def say(self, text):
         try:
             tts = ALProxy("ALTextToSpeech", self.ip, self.port)
-            tts.setVolume(0.9)
+            tts.setVolume(0.5)
             tts.say(text)
 
         except Exception, e:
@@ -253,7 +258,7 @@ class AssistentAgent:
             if cntrl == 'hello':
                 animation = '^start(animations/Stand/Gestures/Hey_1)'
                 wait = '^wait(animations/Stand/Gestures/Hey_1)'
-                string = 'hello' + animation + name
+                string = 'Hi' + animation + name + 'nice to see you' + wait
                 atts.say(string)
 
         except Exception, e:
