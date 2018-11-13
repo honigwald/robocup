@@ -57,6 +57,9 @@ class AssistentAgent:
             print "Error when creating face detection proxy:"
             print str(e)
 
+        faceProxy.setTrackingEnabled(False)
+        faceProxy.setRecognitionConfidenceThreshold(0.6)
+
         # store recognized face with given name in database
         if state == 'learn':
             while True:                     # loops until NAO understood the correct name
@@ -115,6 +118,25 @@ class AssistentAgent:
             faceProxy.unsubscribe("face")   # Unsubscribe the module.
             return name
 
+        elif state == 'detected':
+            period = 500
+            faceProxy.subscribe("face", period, 0.0 )
+            memValue = "FaceDetected"
+            try:
+                memoryProxy = ALProxy("ALMemory", self.ip, self.port)
+            except Exception, e:
+                print "Error when creating memory proxy:"
+                print str(e)
+                exit(1)
+
+            val = memoryProxy.getData(memValue, 0)
+            if(val and isinstance(val, list) and len(val) == 5):
+                faceProxy.unsubscribe("face")   # Unsubscribe the module.
+                return True
+            else:
+                faceProxy.unsubscribe("face")   # Unsubscribe the module.
+                return False
+
         # prints content of database
         elif state == 'getdb':
             print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
@@ -126,57 +148,64 @@ class AssistentAgent:
         ### initialize NAO for the demonstration
         self.motion('wakeUp')
         self.motion('moveHead', 'HeadPitch', -0.6)
-        self.tracker('start')
+        self.tracker('stop')
         checked = []                        # This array stores already greeted people
-        angleOfHeadYaw = -(math.pi)
 
         for i in range(0,4):                            # outer loop - turn your body 90* left
             j = 0
+            angleOfHeadYaw = (-2.6)
+            self.motion('moveHead', 'HeadPitch', -0.4)
+            time.sleep(2)
+            counter = 0
+
             while j < 3:                                # inner loop - head looks from right 2center 2left
-                if self.tracker('check'):               # check if a target is detected
+                if self.face('detected'):               # check if a target is detected
                     name = self.face('getname')
-                    print name
-                    print "Checked: %s" % checked
-                    if str(name) in checked:            # check if target already recognized
-                        print "Checked: %s" % checked
-                        continue
+                    print "Target detected %s" % name
+
+                    if name == '':
+                        # learn
+                        self.tracker('start')
+                        self.say('hello')
+                        self.say('would you tell me your name')
+                        time.sleep(0.5)
+                        self.say('then say yes')
+                        resp = nao.speech_recognize(2.0).lower()
+                        resp = str(resp)
+                        if resp == 'yes':           # start learning
+                            self.face('learn')
+                        else:                             # person won't tell his name
+                            self.say('awww. thats sad')
+                        self.tracker('stop')
                     else:
-                        name = str(name)
-                        if name != '':                  # check if we have a name
-                            if name in checked:         # check if target already greeted
-                                continue
-                            else: 
-                                self.animated('hello', name)
-                                checked.append(name)    # mark name as greeted
-                        else:
-                            ### TODO: TESTING - DETECTED SOMEONE WHO IS NOT KNOWN
-                            self.say('hello')
-                            self.say('would you tell me your name')
-                            time.sleep(1)
-                            self.say('then say yes')
-                            resp = nao.speech_recognize(2.0).lower()
-                            resp = str(resp)
-                            if resp == 'yes':           # start learning
-                                self.face('learn')
-                            else:                       # person won't tell his name
-                                self.say('awww. thats sad')
-                        time.sleep(3)
+                        if str(name) not in checked:            # check if target already recognized
+                            # greet
+                            self.animated('hello', name)
+                            checked.append(name)                # mark name as greeted
+                            self.motion('moveHead', 'HeadPitch', -0.4)
+
+                        time.sleep(2)
+                        counter += 1
+                        if counter == 10:
+                            j += 1
                 # no target detected
                 else:
                     # move head of NAO - in three steps from right to left
-                    angleOfHeadYaw = angleOfHeadYaw + (math.pi)/2
+                    angleOfHeadYaw = angleOfHeadYaw + 1.3
                     self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
                     j += 1
                     time.sleep(3)
-                ### --- END OF INNER LOOP --- ### 
+                ### --- END OF INNER LOOP --- ###
 
+            self.motion('moveHead', 'HeadYaw', 0)
             # turn left in place
             coords = [0.0, 0.0]
             nao.move('turnleft', coords)
-            ### --- END OF OUTER LOOP --- ### 
+            time.sleep(2)
+            ### --- END OF OUTER LOOP --- ###
 
         # cleanup after finished demonstration
-        self.tracker('stop')
+        #self.tracker('stop')
         self.motion('rest')
         print "Demo is finished"
 
@@ -233,8 +262,6 @@ class AssistentAgent:
             elif cntrl == 'turnleft':
                 theta = math.pi/2
                 motion.moveTo(coords[0], coords[1], theta)
-
-            motion.rest()
 
         except Exception, e:
             print e
