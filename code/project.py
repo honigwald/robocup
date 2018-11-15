@@ -116,6 +116,16 @@ class AssistentAgent:
                 ### DETERMINING THE NAME OF RECOGNIZED PERSON
 
                 name = val[1][0][1][2]
+
+                # NEED TESTS!!! ------------------------------------
+                faceData = filter_info(val)             # replace data with faceData if work
+                for i, face in enumerate(faceData):
+                    print i + '. Face information:'
+                    print ' - ID: ' + face['id']
+                    print ' - Name: ' + face['name']
+                    print ' - Coords: ' + str(face['coords'])
+                # --------------------------------------------------
+
                 print "I know you: %s" % name
                 data.append(name)
                 data.append(val[3])             # append CameraPose_InRobotFrame
@@ -135,12 +145,23 @@ class AssistentAgent:
 
         list = []
 
-        # WARNING INDICES ARE SO FUCKING WRONG!!!! JUST AN EXAMPLE HOW TO DO!!!!
-        for faceInfo in array[1][0]:
+        #  array = [ TimeStamp, [ FaceInfo[N], Time_Filtered_Reco_Info ], CameraPose_InTorsoFrame, CameraPose_InRobotFrame, Camera_Id ]
+        faceInfoArray = array[1]
+
+        # faceInfoArray = [ FaceInfo[N], Time_Filtered_Reco_Info ], get rid of Time_Filtered_Reco_Info in faceInfoArray
+        for i in range( len(faceInfoArray) - 1 ):
+
             info = {}
-            info[name] = faceInfo[1][2]
-            info[x] = faceInfo[1][2]
-            info[y] = faceInfo[1][2]
+
+            # FaceInfo = [ ShapeInfo, ExtraInfo[N] ?????? ]
+            faceShapeInfo = faceInfo[0]
+            faceExtraInfo = faceInfo[1]
+
+            # ExtraInfo = [ faceID, scoreReco, faceLabel, leftEyePoints, ...], ShapeInfo = [ 0, alpha, beta, sizeX, sizeY ]
+            info['id'] = faceExtraInfo[0]
+            info['name'] = faceExtraInfo[2]
+            info['coords'] = [faceShapeInfo[1], faceShapeInfo[2]]
+
             list.append(info)
 
         return list
@@ -164,8 +185,7 @@ class AssistentAgent:
 
             for j in range(3):                                # inner loop - head looks from right 2center 2left
 
-                # TODO1: finish function filter_info: data need to be modify in [[name, position], [., .], ...] for x person
-                # TODO2: direct head of nao to face of person if 1. someone recognized and known and 2. someone recognized and unknown
+                # TODO: direct head of nao to face of person if 1. someone recognized and known and 2. someone recognized and unknown
                 data = self.face('getdata')
 
 
