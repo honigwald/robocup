@@ -18,6 +18,7 @@ class AssistentAgent:
         self.ip = ip
         self.port = port
         self.r = sr.Recognizer()
+        self.r.energy_threshold = 4000
 
     def speech_recognize(self, time):
         with sr.Microphone() as source:
@@ -30,15 +31,23 @@ class AssistentAgent:
                 return 'there was an error!'
             except sr.UnknownValueError, e:
                 print e
-                return 'what do you mean? i do not understand'
+                print 'what do you mean? i do not understand'
+                return ''
+
+    def create_proxy(self, name):
+
+        try:
+            proxy = ALProxy(name, self.ip, self.port)
+        except Exception, e:
+            print "Error when creating " + name + " proxy:"
+            print str(e)
+
+        return proxy
 
     ### Goto predefined motions
     def motion(self, state, joint = None, angle = None):
-        try:
-            motion = ALProxy("ALMotion", self.ip, self.port)
-        except Exception, e:
-            print "Error when creating face detection proxy:"
-            print str(e)
+
+        motion = self.create_proxy("ALMotion")
 
         if state == 'wakeUp':
             motion.wakeUp()
@@ -51,14 +60,11 @@ class AssistentAgent:
 
     ### Controlling facerecognition API
     def face(self, state):
-        try:
-            faceProxy = ALProxy("ALFaceDetection", self.ip, self.port)
-        except Exception, e:
-            print "Error when creating face detection proxy:"
-            print str(e)
+
+        faceProxy = self.create_proxy("ALFaceDetection")
 
         faceProxy.setTrackingEnabled(False)
-        faceProxy.setRecognitionConfidenceThreshold(0.6)
+        #faceProxy.setRecognitionConfidenceThreshold(0.6)
 
         # store recognized face with given name in database
         if state == 'learn':
@@ -93,37 +99,51 @@ class AssistentAgent:
             else:
                 print "Something went wrong"
 
-        # returns the name of recognized person
+        # returns the name and position of recognized persons
         elif state == 'getdata':
             period = 500
             faceProxy.subscribe("face", period, 0.0 )
             memValue = "FaceDetected"
-            try:
-                memoryProxy = ALProxy("ALMemory", self.ip, self.port)
-            except Exception, e:
-                print "Error when creating memory proxy:"
-                print str(e)
-                exit(1)
 
-            data = []                           # store all return values
-            val = memoryProxy.getData(memValue, 0)
+            memoryProxy = self.create_proxy("ALMemory")
+
+            # store all return values data = [[name, coords], [...]]
+            data = []
+            val = memoryProxy.getData(memValue)
+
             if(val and isinstance(val, list) and len(val) == 5):
                 ### THIS IS IMPORTANT
                 ### DETERMINING THE NAME OF RECOGNIZED PERSON
+
                 name = val[1][0][1][2]
                 print "I know you: %s" % name
                 data.append(name)
                 data.append(val[3])             # append CameraPose_InRobotFrame
                 faceProxy.unsubscribe("face")   # Unsubscribe the module.
-                return data
+
             else:
                 ### nobody is detected
                 faceProxy.unsubscribe("face")   # Unsubscribe the module.
-                return False
+
+            return data
 
         # prints content of database
         elif state == 'getdb':
             print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
+
+    def filter_info(self, array):
+
+        list = []
+
+        # WARNING INDICES ARE SO FUCKING WRONG!!!! JUST AN EXAMPLE HOW TO DO!!!!
+        for faceInfo in array[1][0]:
+            info = {}
+            info[name] = faceInfo[1][2]
+            info[x] = faceInfo[1][2]
+            info[y] = faceInfo[1][2]
+            list.append(info)
+
+        return list
 
     ### The final demonstration of the project
     def rundemo(self):
@@ -137,31 +157,44 @@ class AssistentAgent:
 
         for i in range(0,4):                            # outer loop - turn your body 90* left
             j = 0
-            angleOfHeadYaw = (-2.6)
+            angleOfHeadYaw = (-2.0)
             self.motion('moveHead', 'HeadPitch', -0.4)
             time.sleep(2)
             counter = 0
 
-            while j < 3:                                # inner loop - head looks from right 2center 2left
+            for j in range(3):                                # inner loop - head looks from right 2center 2left
+
+                # TODO1: finish function filter_info: data need to be modify in [[name, position], [., .], ...] for x person
+                # TODO2: direct head of nao to face of person if 1. someone recognized and known and 2. someone recognized and unknown
                 data = self.face('getdata')
+
+
                 ### <NAME> IS RECOGNIZED - START GREETING PROCEDURE
-                if data[0] != '':
+                if data and data[0] != '' and data[0] not in checked:
+                #if data and data[0] != '':
+                    self.move('position', data[1])
                     name = data[0]
-                    if str(name) not in checked:        # check if target already recognized
+                    #if str(name) not in checked:        # check if target already recognized
                         # greet
-                        self.animated('hello', name)
-                        checked.append(name)            # mark as recognized
-                        self.motion('moveHead', 'HeadPitch', -0.4)
+                    self.animated('hello', name)
+                    checked.append(name)            # mark as recognized
+                    self.motion('moveHead', 'HeadPitch', -0.4)
 
                     # prevents nao is stuck while recognized someone
                     time.sleep(2)
+                    '''
                     counter += 1
-                    if counter == 10:
+                    if counter == 5:
+                        angleOfHeadYaw = angleOfHeadYaw + 1.0
+                        self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
                         j += 1
-                
+                    '''
+
                 ### SOMEONE UNKOWN IS RECOGNIZED - TRY TO LEARN
-                elif data[0] == '':
+                elif data and data[0] == '':
                     self.tracker('start')
+                    #self.move('position', data[1][3:4])
+                    print data[1][3:4]
                     self.say('hello')
                     self.say('would you tell me your name')
                     time.sleep(0.5)
@@ -173,58 +206,21 @@ class AssistentAgent:
                     else:                             # person won't tell his name
                         self.say('awww. thats sad')
                     self.tracker('stop')
+                    print data
 
                 ### NO ONE IS RECOGNIZED
-                elif data == False:
+                else:
                     # move head of NAO - in three steps from right to left
-                    angleOfHeadYaw = angleOfHeadYaw + 1.3
+                    angleOfHeadYaw = angleOfHeadYaw + 1.0
                     self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
                     j += 1
                     time.sleep(2)
-
-                #if self.face('detected'):            # check if a target is detected
-                #    name = self.face('getname')
-                #    print "Target detected %s" % name
-
-                #    if name == '':
-                #        # learn
-                #        self.tracker('start')
-                #        self.say('hello')
-                #        self.say('would you tell me your name')
-                #        time.sleep(0.5)
-                #        self.say('then say yes')
-                #        resp = nao.speech_recognize(2.0).lower()
-                #        resp = str(resp)
-                #        if resp == 'yes':           # start learning
-                #            self.face('learn')
-                #        else:                             # person won't tell his name
-                #            self.say('awww. thats sad')
-                #        self.tracker('stop')
-                #    else:
-                #        if str(name) not in checked:            # check if target already recognized
-                #            # greet
-                #            self.animated('hello', name)
-                #            checked.append(name)                # mark name as greeted
-                #            self.motion('moveHead', 'HeadPitch', -0.4)
-
-                #        time.sleep(2)
-                #        counter += 1
-                #        if counter == 10:
-                #            j += 1
-                ## no target detected
-                #else:
-                #    # move head of NAO - in three steps from right to left
-                #    angleOfHeadYaw = angleOfHeadYaw + 1.3
-                #    self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
-                #    j += 1
-                #    time.sleep(3)
 
                 ### --- END OF INNER LOOP --- ###
 
             self.motion('moveHead', 'HeadYaw', 0)
             # turn left in place
-            coords = [0.0, 0.0]
-            nao.move('turnleft', coords)
+            nao.move('turnleft', [0.0, 0.0])
             time.sleep(2)
             ### --- END OF OUTER LOOP --- ###
 
@@ -235,11 +231,8 @@ class AssistentAgent:
 
     ### Controlling the facetracking function of nao
     def tracker(self, state):
-        try:
-            tracker = ALProxy("ALTracker", self.ip, self.port)
-        except Exception, e:
-            print "Could not create proxy to ALTracker!"
-            print "Error was: ", e
+
+        tracker = self.create_proxy("ALTracker")
 
         # start the tracker [modes: Head, Body, Move]
         if state == "start":
@@ -269,52 +262,44 @@ class AssistentAgent:
     ### Controlling the movement of nao
     ### TODO: HERE WE'VE TO IMPLEMENT RANDOM MOVEMENT
     def move(self, cntrl, coords):
-        try:
-            motion = ALProxy("ALMotion", self.ip, self.port)
-            posture= ALProxy("ALRobotPosture", self.ip, self.port)
 
-            # Prepare NAO to walk
-            motion.wakeUp()
-            posture.goToPosture("StandInit", 0.5)
-            #motion.standInit()
+        motion = self.create_proxy("ALMotion")
+        posture = self.create_proxy("ALRobotPosture")
 
-            # check which move to do
-            if cntrl == 'forward':
-                motion.moveTo(coords[0], 0, 0)
-            elif cntrl == 'backward':
-                motion.moveTo(-(coords[0]), 0, 0)
-            elif cntrl == 'turnleft':
-                theta = math.pi/2
-                motion.moveTo(coords[0], coords[1], theta)
+        # Prepare NAO to walk
+        motion.wakeUp()
+        posture.goToPosture("StandInit", 0.5)
+        #motion.standInit()
 
-        except Exception, e:
-            print e
+        # check which move to do
+        if cntrl == 'forward':
+            motion.moveTo(coords[0], 0, 0)
+        elif cntrl == 'backward':
+            motion.moveTo(-(coords[0]), 0, 0)
+        elif cntrl == 'position':
+            print coords
+            motion.moveTo(coords[3], coords[4], 0)
+        elif cntrl == 'turnleft':
+            theta = math.pi/2
+            motion.moveTo(coords[0], coords[1], theta)
+
 
     ### Nao speaks given text
     def say(self, text):
-        try:
-            tts = ALProxy("ALTextToSpeech", self.ip, self.port)
-            tts.setVolume(0.5)
-            tts.say(text)
 
-        except Exception, e:
-            print "Could not create proxy to ALTextToSpeech!"
-            print "Error was: ", e
+        tts = self.create_proxy("ALTextToSpeech")
+        tts.setVolume(0.5)
+        tts.say(text)
 
     ### Nao speaks given text with emotions ;)
     def animated(self, cntrl, name):
-        try:
-            atts = ALProxy("ALAnimatedSpeech", self.ip, self.port)
+        atts = self.create_proxy("ALAnimatedSpeech")
 
-            if cntrl == 'hello':
-                animation = '^start(animations/Stand/Gestures/Hey_1)'
-                wait = '^wait(animations/Stand/Gestures/Hey_1)'
-                string = 'Hi' + animation + name + 'nice to see you' + wait
-                atts.say(string)
-
-        except Exception, e:
-            print "Could not create proxy to ALTextToSpeech!"
-            print "Error was: ", e
+        if cntrl == 'hello':
+            animation = '^start(animations/Stand/Gestures/Hey_1)'
+            wait = '^wait(animations/Stand/Gestures/Hey_1)'
+            string = 'Hi' + animation + name + 'nice to see you' + wait
+            atts.say(string)
 
 
 ### MAIN-FUNCTION OF THIS PROJECT
@@ -330,82 +315,67 @@ if __name__ =='__main__':
     nao = AssistentAgent(nao_ip, port)
 
     nao.say('awaiting keyword!')
-    #nao.move(0.8, 0.4)
+    nao.move(0.8, 0.4)
     while True:
         print "Waiting for Keyword"
-        try:
-            keyword = nao.speech_recognize(1).lower()
-            print "You said: " + keyword
-            if keyword == "no":
-                print "Listening..."
-                try:
-                    nao.say('listening')
-                    command = nao.speech_recognize(2.0).lower()
-                    print "You said: " + command
+        keyword = nao.speech_recognize(2.0).lower()
+        print "You said: " + keyword
+        if keyword == "no":
+            print "Listening..."
 
-                    # test speech capabilities of NAO
-                    if command == 'hello':
-                        nao.say('hello')
+            nao.say('listening')
+            command = nao.speech_recognize(2.0).lower()
+            print "You said: " + command
 
-                    # get stored faces
-                    elif command == 'database':
-                        nao.face('getdb')
+            # test speech capabilities of NAO
+            if command == 'hello':
+                nao.say('hello')
 
-                    # wakeup NAO - goto motion standInit
-                    elif command == 'wake up':
-                        nao.motion('wakeUp')
-                        nao.motion('moveHead', 'HeadPitch', -0.6)
+            # get stored faces
+            elif command == 'database':
+                nao.face('getdb')
 
-                    # execute face_learning phase
-                    elif command == 'new person':
-                        # TODO: NEEDS TO BE TESTED
-                        # RESULT: Voice speed has to slowdown!
-                        nao.say('position yourself in front me')
-                        time.sleep(1)
-                        nao.say('say ok when you are ready')
-                        resp = nao.speech_recognize(2.0).lower()
-                        print resp
-                        if resp == 'ok':
-                            nao.face('learn')
-                        else:
-                            nao.say('oh something went wrong')
+            # wakeup NAO - goto motion standInit
+            elif command == 'wake up':
+                nao.motion('wakeUp')
+                nao.motion('moveHead', 'HeadPitch', -0.6)
 
-                    # remove all faces from facedb
-                    elif command == 'reset':
-                        nao.say('removing all faces from database')
-                        nao.say('say ok to process')
-                        resp = nao.speech_recognize(2.0).lower()
-                        if resp == 'ok':
-                            nao.face('cleardb')
-                            nao.say('database cleared')
-                        else:
-                            nao.say('oh something went wrong')
+            # execute face_learning phase
+            elif command == 'new person':
+                # TODO: NEEDS TO BE TESTED
+                # RESULT: Voice speed has to slowdown!
+                nao.say('position yourself in front me')
+                time.sleep(1)
+                nao.say('say ok when you are ready')
+                resp = nao.speech_recognize(2.0).lower()
+                print resp
+                if resp == 'ok':
+                    nao.face('learn')
+                else:
+                    nao.say('oh something went wrong')
 
-                    # run the demonstration of the project
-                    elif command == 'test':
-                        # TODO: RUNDEMO STILL NOT FINISHED - WE'RE MAKING PROGRESS
-                        nao.say('starting demo')
-                        nao.rundemo()
+            # remove all faces from facedb
+            elif command == 'reset':
+                nao.say('removing all faces from database')
+                nao.face('cleardb')
+                nao.say('database cleared')
 
-                    # NAO will rest
-                    elif command == 'rest':
-                        nao.motion('rest')
+            # run the demonstration of the project
+            elif command == 'test':
+                # TODO: RUNDEMO STILL NOT FINISHED - WE'RE MAKING PROGRESS
+                nao.say('starting demo')
+                nao.rundemo()
 
-                    # stop processing and let NAO rest
-                    elif command == "stop":
-                        nao.say('ok, i will rest now!')
-                        nao.motion('rest')
-                        break
+            # NAO will rest
+            elif command == 'rest':
+                nao.motion('rest')
 
-                    elif command == "move":
-                        coords = [0.0, 0.0]
-                        nao.move('turnleft', coords)
+            # stop processing and let NAO rest
+            elif command == "stop":
+                nao.say('ok, i will rest now!')
+                nao.motion('rest')
+                break
 
-
-                except Exception as e:
-                    nao.say('I dont know')
-                    print 'WTF ... NONETYPE'
-                    print e
-        except Exception as e:
-            print 'Keyword not recognized!!!'
-            print e
+            elif command == "move":
+                coords = [0.0, 0.0]
+                nao.move('turnleft', coords)
