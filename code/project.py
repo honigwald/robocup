@@ -12,6 +12,7 @@ from naoqi import ALProxy
 from hello import *
 import speech_recognition as sr
 from random import uniform
+from functools import reduce
 
 class AssistentAgent:
     def __init__(self, ip, port):
@@ -109,26 +110,27 @@ class AssistentAgent:
 
             # store all return values data = [[name, coords], [...]]
             data = []
-            val = memoryProxy.getData(memValue)
+            val = memoryProxy.getData(memValue, 0)
 
             if(val and isinstance(val, list) and len(val) == 5):
                 ### THIS IS IMPORTANT
                 ### DETERMINING THE NAME OF RECOGNIZED PERSON
 
-                name = val[1][0][1][2]
+                #name = val[1][0][1][2]
 
                 # NEED TESTS!!! ------------------------------------
-                faceData = filter_info(val)             # replace data with faceData if work
-                for i, face in enumerate(faceData):
-                    print i + '. Face information:'
-                    print ' - ID: ' + face['id']
-                    print ' - Name: ' + face['name']
+                data = self.filter_info(val)             # replace data with faceData if work
+                for i, face in enumerate(data):
+                    print str(i) + '. Face information:'
+                    print ' - ID: ' + str(face['id'])
+                    print ' - Name: ' + str(face['name'])
                     print ' - Coords: ' + str(face['coords'])
+                    #print ' - m = ' + reduce((lambda x, y: x / y), face['coords'])
                 # --------------------------------------------------
 
-                print "I know you: %s" % name
-                data.append(name)
-                data.append(val[3])             # append CameraPose_InRobotFrame
+                #print "I know you: %s" % name
+                #data.append(name)
+                #data.append(val[3])             # append CameraPose_InRobotFrame
                 faceProxy.unsubscribe("face")   # Unsubscribe the module.
 
             else:
@@ -144,18 +146,21 @@ class AssistentAgent:
     def filter_info(self, array):
 
         list = []
+        print array
 
         #  array = [ TimeStamp, [ FaceInfo[N], Time_Filtered_Reco_Info ], CameraPose_InTorsoFrame, CameraPose_InRobotFrame, Camera_Id ]
-        faceInfoArray = array[1]
+        faceInfo = array[1]
 
         # faceInfoArray = [ FaceInfo[N], Time_Filtered_Reco_Info ], get rid of Time_Filtered_Reco_Info in faceInfoArray
-        for i in range( len(faceInfoArray) - 1 ):
+        for i in range( len(faceInfo) - 1 ):
 
             info = {}
 
             # FaceInfo = [ ShapeInfo, ExtraInfo[N] ?????? ]
-            faceShapeInfo = faceInfo[0]
-            faceExtraInfo = faceInfo[1]
+            faceShapeInfo = faceInfo[i][0]
+            faceExtraInfo = faceInfo[i][1]
+
+            #print faceExtraInfo
 
             # ExtraInfo = [ faceID, scoreReco, faceLabel, leftEyePoints, ...], ShapeInfo = [ 0, alpha, beta, sizeX, sizeY ]
             info['id'] = faceExtraInfo[0]
@@ -176,7 +181,7 @@ class AssistentAgent:
         self.tracker('stop')
         checked = []                                    # This array stores already greeted people
 
-        for i in range(0,4):                            # outer loop - turn your body 90* left
+        for i in range(4):                            # outer loop - turn your body 90* left
             j = 0
             angleOfHeadYaw = (-2.0)
             self.motion('moveHead', 'HeadPitch', -0.4)
@@ -186,55 +191,60 @@ class AssistentAgent:
             for j in range(3):                                # inner loop - head looks from right 2center 2left
 
                 # TODO: direct head of nao to face of person if 1. someone recognized and known and 2. someone recognized and unknown
-                data = self.face('getdata')
-
+                faces = self.face('getdata')
 
                 ### <NAME> IS RECOGNIZED - START GREETING PROCEDURE
-                if data and data[0] != '' and data[0] not in checked:
+                #if data and data[0] != '' and data[0] not in checked:
+                if faces:
                 #if data and data[0] != '':
-                    self.move('position', data[1])
-                    name = data[0]
-                    #if str(name) not in checked:        # check if target already recognized
-                        # greet
-                    self.animated('hello', name)
-                    checked.append(name)            # mark as recognized
-                    self.motion('moveHead', 'HeadPitch', -0.4)
+                    #self.move('position', data[1])
+                    for face in faces:
+                        # recognize someone known and not checked
+                        print 'Name: ' + face['name']
+                        print 'Checked: ' + str(checked)
+                        if face['name'] != '' and not face['name'] in checked:
+                            #name = data[0]
+                            #if str(name) not in checked:        # check if target already recognized
+                                # greet
+                            self.animated('hello', face['name'])
+                            checked.append(face['name'])            # mark as recognized
+                            self.motion('moveHead', 'HeadPitch', -0.4)
 
-                    # prevents nao is stuck while recognized someone
-                    time.sleep(2)
-                    '''
-                    counter += 1
-                    if counter == 5:
-                        angleOfHeadYaw = angleOfHeadYaw + 1.0
-                        self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
-                        j += 1
-                    '''
+                            # prevents nao is stuck while recognized someone
+                            time.sleep(2)
+                            '''
+                            counter += 1
+                            if counter == 5:
+                                angleOfHeadYaw = angleOfHeadYaw + 1.0
+                                self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
+                                j += 1
+                        '''
 
-                ### SOMEONE UNKOWN IS RECOGNIZED - TRY TO LEARN
-                elif data and data[0] == '':
-                    self.tracker('start')
-                    #self.move('position', data[1][3:4])
-                    print data[1][3:4]
-                    self.say('hello')
-                    self.say('would you tell me your name')
-                    time.sleep(0.5)
-                    self.say('say yes')
-                    resp = nao.speech_recognize(2.0).lower()
-                    resp = str(resp)
-                    if resp == 'yes':                 # start learning
-                        self.face('learn')
-                    else:                             # person won't tell his name
-                        self.say('awww. thats sad')
-                    self.tracker('stop')
-                    print data
+                        ### SOMEONE UNKOWN IS RECOGNIZED - TRY TO LEARN
+                        elif face['name'] == '':
+                            #self.tracker('start')
+                            #self.motion('moveHead', 'HeadYaw', face['coords'][1])
+                            #self.motion('moveHead', 'HeadPitch', face['coords'][0])
+                            #self.move('position', data[1][3:4])
+                            #print data[1][3:4]
+                            self.say('hello')
+                            self.say('would you tell me your name')
+                            time.sleep(0.5)
+                            self.say('say yes')
+                            resp = nao.speech_recognize(2.0).lower()
+                            resp = str(resp)
+                            if resp == 'yes':                 # start learning
+                                self.face('learn')
+                            else:                             # person won't tell his name
+                                self.say('awww. thats sad')
+                            #self.tracker('stop')
+                            #print data
 
                 ### NO ONE IS RECOGNIZED
-                else:
-                    # move head of NAO - in three steps from right to left
-                    angleOfHeadYaw = angleOfHeadYaw + 1.0
-                    self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
-                    j += 1
-                    time.sleep(2)
+                # move head of NAO - in three steps from right to left
+                angleOfHeadYaw = angleOfHeadYaw + 1.0
+                self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
+                time.sleep(3)
 
                 ### --- END OF INNER LOOP --- ###
 
@@ -308,7 +318,7 @@ class AssistentAgent:
     def say(self, text):
 
         tts = self.create_proxy("ALTextToSpeech")
-        tts.setVolume(0.5)
+        tts.setVolume(0.1)
         tts.say(text)
 
     ### Nao speaks given text with emotions ;)
@@ -334,8 +344,11 @@ if __name__ =='__main__':
     port = 9559
     nao = AssistentAgent(nao_ip, port)
 
-    nao.say('awaiting keyword!')
-    nao.move(0.8, 0.4)
+    #nao.say('awaiting keyword!')
+    #nao.say('hello')
+    nao.face('cleardb')
+    nao.rundemo()
+    # nao.move(0.8, 0.4)
     while True:
         print "Waiting for Keyword"
         keyword = nao.speech_recognize(2.0).lower()
