@@ -102,8 +102,7 @@ class AssistentAgent:
 
         # returns the name and position of recognized persons
         elif state == 'getdata':
-            period = 500
-            faceProxy.subscribe("face", period, 0.0 )
+
             memValue = "FaceDetected"
 
             memoryProxy = self.create_proxy("ALMemory")
@@ -111,6 +110,7 @@ class AssistentAgent:
             # store all return values data = [[name, coords], [...]]
             data = []
             val = memoryProxy.getData(memValue, 0)
+            print val
 
             if(val and isinstance(val, list) and len(val) == 5):
                 ### THIS IS IMPORTANT
@@ -131,11 +131,11 @@ class AssistentAgent:
                 #print "I know you: %s" % name
                 #data.append(name)
                 #data.append(val[3])             # append CameraPose_InRobotFrame
-                faceProxy.unsubscribe("face")   # Unsubscribe the module.
+                #faceProxy.unsubscribe("face")   # Unsubscribe the module.
 
-            else:
+            #else:
                 ### nobody is detected
-                faceProxy.unsubscribe("face")   # Unsubscribe the module.
+                #faceProxy.unsubscribe("face")   # Unsubscribe the module.
 
             return data
 
@@ -161,7 +161,7 @@ class AssistentAgent:
             faceExtraInfo = faceInfo[i][1]
 
             #print faceExtraInfo
-
+            print faceInfo[len(faceInfo) - 1]
             # ExtraInfo = [ faceID, scoreReco, faceLabel, leftEyePoints, ...], ShapeInfo = [ 0, alpha, beta, sizeX, sizeY ]
             info['id'] = faceExtraInfo[0]
             info['name'] = faceExtraInfo[2]
@@ -175,11 +175,15 @@ class AssistentAgent:
     def rundemo(self):
         print "Demo is running"
 
+        faceProxy = self.create_proxy("ALFaceDetection")
         ### initialize NAO for the demonstration
         self.motion('wakeUp')
         self.motion('moveHead', 'HeadPitch', -0.6)
         self.tracker('stop')
-        checked = []                                    # This array stores already greeted people
+        checked = []
+
+        period = 500
+        faceProxy.subscribe("face", period, 0.0 )                                # This array stores already greeted people
 
         for i in range(4):                            # outer loop - turn your body 90* left
             j = 0
@@ -256,6 +260,7 @@ class AssistentAgent:
 
         # cleanup after finished demonstration
         #self.tracker('stop')
+        faceProxy.unsubscribe("face")
         self.motion('rest')
         print "Demo is finished"
 
@@ -346,8 +351,10 @@ if __name__ =='__main__':
 
     #nao.say('awaiting keyword!')
     #nao.say('hello')
+    #nao.testFace()
     nao.face('cleardb')
     nao.rundemo()
+
     # nao.move(0.8, 0.4)
     while True:
         print "Waiting for Keyword"
