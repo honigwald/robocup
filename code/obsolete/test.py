@@ -1,6 +1,7 @@
 from optparse import OptionParser
 from naoqi import ALProxy
 import speech_recognition as sr
+import time
 
 class TestClass:
 
@@ -11,6 +12,14 @@ class TestClass:
         self.r = sr.Recognizer()
         self.r.energy_threshold = 4000
         self.checked = []
+        self.name = ['Willy', 'Simon', 'Maria']
+
+
+    def say(self, text):
+
+        tts = self.create_proxy("ALTextToSpeech")
+        tts.setVolume(0.1)
+        tts.say(text)
 
 
     def create_proxy(self, name):
@@ -69,33 +78,80 @@ class TestClass:
 
         return list
 
+    def newFace(self, rename):
+
+        faceProxy = self.create_proxy("ALFaceDetection")
+
+        while True:
+            print 'are you ' + rename
+            self.say(rename + '?')
+            name = self.speech_recognize(2.0)
+            print str(name)
+            if name != '':
+
+                time.sleep(2)
+
+                if rename != name:
+                    learnFace = faceProxy.learnFace(str(name))
+                    time.sleep(2)
+                    print learnFace
+                else:
+                    learnFace = faceProxy.reLearnFace(str(rename))
+                    time.sleep(2)
+                print learnFace
+
+                if learnFace:
+                    print 'i got it! '
+                    break
+                else:
+                    print 'ERROR WITH LEARNING YOUR FACE!! '
+
     def greeting(self, faces):
 
+
+        print faces
         if faces:
             for face in faces:
 
-                if face['name'] != '' and face['name'] not in self.checked:
-                    print 'HELLO, ' + face['name']
-                    self.checked.append(face['name'])
+                time.sleep(2)
+
+                if face['name'] != '':
+
+                    if face['score'] < 0.7:
+                        self.newFace(face['name'])
+                    #elif face['name'] not in self.checked:
+                    else:
+                        self.say('hello, ' + face['name'])
+                        #self.checked.append(face['name'])
 
                 elif face['name'] == '':
                     while True:
-                        print 'WHATS YOUR NAME?:'
-                        name = speech_recognize(5.0)
+                        self.say('What is your name?')
+                        name = self.speech_recognize(2.0)
+                        print str(name)
                         if name != '':
+
                             time.sleep(2)
-                            faceProxy = create_proxy("ALFaceDetection")
-                            learnFace = faceProxy.learnFace(name)
+                            faceProxy = self.create_proxy("ALFaceDetection")
+
+
+                            #nm = self.name.pop(0)
+                            learnFace = faceProxy.learnFace(str(name))
                             time.sleep(2)
-                            print learnFace
+                            #print learnFace
+                            #relearnFace = self.relearnFace(str(name))
+                            #time.sleep(2)
+
+
                             if learnFace:
-                                print 'i got it! ' + name
+                                self.say('thank you')
                                 break
                             else:
+                                self.say('got an error')
                                 print 'ERROR WITH LEARNING YOUR FACE!! '
 
                 else:
-                    print 'I already greet you, ' + face['name']
+                    print 'I already greet you.'
 
         else:
             print 'Nobody to greet!'
@@ -106,23 +162,26 @@ class TestClass:
         faceProxy = self.create_proxy("ALFaceDetection")
         memoryProxy = self.create_proxy("ALMemory")
 
+        faceProxy.clearDatabase()
+
         period = 500
-        faceProxy.setRecognitionConfidenceThreshold(0.7)
-        faceProxy.setTrackingEnabled(False)
+
+        #faceProxy.setTrackingEnabled(False)
         faceProxy.subscribe("Test_Face", period, 0.0)
 
         memValue = "FaceDetected"
         faces = []
 
-        for i in range(0, 20):
+        for i in range(0, 200):
             time.sleep(2)
             val = memoryProxy.getData(memValue, 0)
+            print val
 
-            if(val and isinstance(val, list) and len(val) == 2):
+            if(val and isinstance(val, list) and len(val) == 5):
                 # We detected faces !
                 # For each face, we can read its shape info and ID.
                 # First Field = TimeStamp.
-                faces = filter_info(val)
+                faces = self.filter_info(val)
                 print str(faces)
 
             self.greeting(faces)
