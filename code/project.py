@@ -9,7 +9,7 @@ import sys
 import time
 import math
 from naoqi import ALProxy
-from hello import *
+from commands import *
 import speech_recognition as sr
 from random import uniform
 from functools import reduce
@@ -24,7 +24,7 @@ class AssistentAgent:
     def speech_recognize(self, time):
         with sr.Microphone() as source:
             self.r.adjust_for_ambient_noise(source)
-            print 'mic on... start recording!!!'
+            print 'mic on... start recording!'
             audio = self.r.listen(source, phrase_time_limit=time)
             try:
                 return self.r.recognize_google(audio)
@@ -428,6 +428,11 @@ if __name__ =='__main__':
                 # TODO: RUNDEMO STILL NOT FINISHED - WE'RE MAKING PROGRESS
                 nao.say('starting demo')
                 nao.rundemo()
+
+            # start command from another module
+            elif command == 'demo':
+                demo = Demo(self.ip, self.port)
+                demo.run()
 
             # NAO will rest
             elif command == 'rest':
