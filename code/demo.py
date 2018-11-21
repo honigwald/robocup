@@ -1,8 +1,9 @@
 from naoqi import ALProxy
 import speech_recognition as sr
 import time
+import math
 
-class Demo:
+class Demo():
 
 
     def __init__(self, ip, port):
@@ -70,9 +71,8 @@ class Demo:
             faceShapeInfo = faceInfo[i][0]
             faceExtraInfo = faceInfo[i][1]
 
-            info['id'] = faceExtraInfo[0]
-            info['score'] = faceExtraInfo[1]
             info['name'] = faceExtraInfo[2]
+            info['score'] = faceExtraInfo[1]
             info['alpha'] = faceShapeInfo[1]
             info['beta'] = faceShapeInfo[2]
 
@@ -85,10 +85,13 @@ class Demo:
 
         motion = self.create_proxy('ALMotion')
 
-        if alpha > 0.1 or alpha < -0.1:
-        # turn body to direction of target
+        headYawP = motion.getAngles(["HeadYaw"], False)[0]
 
-            motion.moveTo(0, 0, motion.getAngles(["HeadYaw"], False) + alpha)
+        if headYawP != 0:
+            motion.setAngles('HeadYaw', 0, 0.1)
+
+        if alpha- headYawP > 0.1 or alpha - headYawP < -0.1:
+            motion.moveTo(0, 0, + headYawP + alpha)
 
         # turn head to direction of target
         motion.setAngles('HeadPitch', beta - 0.3, 0.1)
@@ -105,11 +108,14 @@ class Demo:
             if rename != '':
                 self.say('Sorry, Are you ' + rename + '?')
                 ans = self.speech_recognize(2.0)
+
                 if ans == 'yes':
                     reLearnFace = faceProxy.reLearnFace(str(rename))
+
                     if reLearnFace:
                         self.say('Haha I know it! Thank you! ' + rename)
                         break
+
                     else:
                         self.say('Oh, sorry my dear!')
                         continue
@@ -125,77 +131,118 @@ class Demo:
                 if learnFace:
                     self.say('thank you')
                     break
+
                 else:
                     self.say('Something went wrong! Please position your face in front of mine!')
                     time.sleep(2)
                     print 'ERROR WITH LEARNING YOUR FACE!! '
 
-    def greeting(self, faces):
+    def greeting(self, face):
 
-        for face in faces:
+        if face['name'] != '':
 
-            if face['name'] != '':
+            if face['score'] <= 0.2:
+                self.learnNewFace()
 
-                if face['score'] <= 0.2:
-                    self.learnNewFace()
+            # less than 60%, can be him/her or not
+            elif face['score'] <= 0.6:
+                self.learnNewFace(face['name'])
 
-                # less than 60%, can be him/her or not
-                elif face['score'] <= 0.6:
-                    self.learnNewFace(face['name'])
+            # more than 60% probability
+            elif face['score'] > 0.6 and face['name'] not in self.checked:
+                motion = self.create_proxy('ALMotion')
 
-                # more than 60% probability
-                elif face['score'] > 0.6 and face['name'] not in self.checked:
-                    animatedHello(self, face['name'])
-                    self.checked.append(face['name'])
+                headPitchP = motion.getAngles(["HeadPitch"], False)
+                self.animatedHello(face['name'])
+
+                motion.setAngles(["HeadPitch"], headPitchP[0], 0.1)
+                self.checked.append(face['name'])
 
             else:
-                self.learnNewFace()
+                print 'already greeted!!!'
+
+        else:
+            self.learnNewFace()
+
+    # this filter will compare all faces and return the person (index) with the lowest score
+    def compareFaces(self, faces):
+
+        # remove all faces with more than 0.7 score
+        for face in faces:
+            if face['name'] in self.checked and face['score'] > 0.7 and len(faces) > 1:
+                # remove face from faces
+                faces.remove(face)
+
+
+        scores = [face['score'] for face in faces]
+        alphas = [face['alpha'] for face in faces]
+        betas = [face['beta'] for face in faces]
+        distances = map(lambda a, b: math.sqrt(a**2 + b**2), alphas, betas)
+
+        # TODO HOW IS THE PRIORITY FOR FACES? DISTANCE OR SCORE?
+        #minScore = scores.index(min(scores))
+        minDistance = distances.index(min(distances))
+
+        return minDistance
 
 
     def run(self):
 
+        # Init
         faceProxy = self.create_proxy("ALFaceDetection")
         memoryProxy = self.create_proxy("ALMemory")
         motion = self.create_proxy("ALMotion")
-        faceProxy.subscribe("Test_Face", period, 0.0)
 
+        faceProxy.clearDatabase()
+
+        faceProxy.subscribe("Test_Face", 500, 0.0)
         motion.wakeUp()
 
-        period = 500
         faces = []
 
+        # Main loop
         for i in range(4):
 
+            # For each loop set head into position
             motion.setAngles('HeadPitch', -0.4, 0.1)
-            headYawPosition = -0.4
+            headYawPosition = -0.6
 
+            # side loop: for each iteration check for face recognition
             for j in range(1,24):
+
                 time.sleep(1)
                 val = memoryProxy.getData("FaceDetected", 500)
-                #print val
 
                 if(val and isinstance(val, list) and len(val) == 5):
 
                     faces = self.filter_info(val)
                     print str(faces)
+                    index = self.compareFaces(faces)
+                    face = faces[index]
+                    print 'lowest score: ' + str(faces[index])
 
-                    if -0.2 < faces[0]['alpha'] < 0.2 and -0.2 < faces[0]['beta'] < 0.2 :
-                        self.greeting(faces)
+                    if -0.2 < face['alpha'] < 0.2 and -0.2 < face['beta'] < 0.2 :
+                        self.greeting(face)
                     else:
-                        self.turnBody(faces[0]['alpha'], faces[0]['beta'])
+                        self.turnBody(face['alpha'], face['beta'])
+                        j -= 1
 
                 else:
                     print 'No one detected'
+
+                    # turn head, avoid deadlock
                     if j % 6 == 0:
-                        motion.setAngles('HeadYaw', headposition, 0.1)
-                        headYawPosition += 0.4
+                        motion.setAngles(['HeadYaw', 'HeadPitch'], [ headYawPosition, -0.4 ], 0.1)
+
+
+                        headYawPosition += 0.6
 
                 time.sleep(1)
 
             # turn body 90 degree to left
             motion.setAngles('HeadYaw', 0, 0.1)
             motion.setAngles('HeadPitch', 0, 0.1)
-            motion.moveTo(coords[0], coords[1], math.pi/2)
+            motion.moveTo(0, 0, math.pi/2)
             time.sleep(2)
 
 

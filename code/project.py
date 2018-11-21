@@ -9,12 +9,13 @@ import sys
 import time
 import math
 from naoqi import ALProxy
-from commands import *
+import demo as dm
 import speech_recognition as sr
 from random import uniform
 from functools import reduce
 
-class AssistentAgent:
+class AssistentAgent():
+
     def __init__(self, ip, port):
         self.ip = ip
         self.port = port
@@ -371,6 +372,10 @@ if __name__ =='__main__':
     port = 9559
     nao = AssistentAgent(nao_ip, port)
 
+
+    demo = dm.Demo(nao_ip, port)
+    demo.run()
+
     nao.say('awaiting keyword!')
     #nao.say('hello')
     #nao.testFace()
@@ -383,8 +388,8 @@ if __name__ =='__main__':
         print "Waiting for Keyword"
         keyword = nao.speech_recognize(2.0).lower()
         print "You said: " + keyword
-        if keyword == "no":
-            print "Listening..."
+        if keyword == "norman":
+            print "Yes?"
 
             nao.say('listening')
             command = nao.speech_recognize(2.0).lower()
@@ -430,8 +435,8 @@ if __name__ =='__main__':
                 nao.rundemo()
 
             # start command from another module
-            elif command == 'demo':
-                demo = Demo(self.ip, self.port)
+            elif command == 'demonstration':
+                demo = dm.Demo(nao_ip, port)
                 demo.run()
 
             # NAO will rest
