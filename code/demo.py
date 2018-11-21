@@ -168,20 +168,20 @@ class Demo():
     def compareFaces(self, faces):
 
         # remove all faces with more than 0.7 score
-        for face in faces:
-            if face['name'] in self.checked and face['score'] > 0.7 and len(faces) > 1:
-                # remove face from faces
-                faces.remove(face)
+        if len(faces) > 1:
+            for face in faces:
+                if face['name'] in self.checked and face['score'] > 0.7:
+                    # remove face from faces
+                    faces.remove(face)
 
-
-        scores = [face['score'] for face in faces]
         alphas = [face['alpha'] for face in faces]
         betas = [face['beta'] for face in faces]
         distances = map(lambda a, b: math.sqrt(a**2 + b**2), alphas, betas)
-
-        # TODO HOW IS THE PRIORITY FOR FACES? DISTANCE OR SCORE?
-        #minScore = scores.index(min(scores))
         minDistance = distances.index(min(distances))
+
+        # HOW IS THE PRIORITY FOR FACES? DISTANCE OR SCORE?
+        # scores = [face['score'] for face in faces]
+        # minScore = scores.index(min(scores))
 
         return minDistance
 

@@ -372,10 +372,6 @@ if __name__ =='__main__':
     port = 9559
     nao = AssistentAgent(nao_ip, port)
 
-
-    demo = dm.Demo(nao_ip, port)
-    demo.run()
-
     nao.say('awaiting keyword!')
     #nao.say('hello')
     #nao.testFace()
