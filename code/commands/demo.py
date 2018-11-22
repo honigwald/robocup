@@ -13,14 +13,13 @@ class Demo():
         self.r.energy_threshold = 4000
         self.checked = []
 
-
+    # make nao say a given text
     def say(self, text):
 
         tts = self.create_proxy("ALTextToSpeech")
-        tts.setVolume(0.1)
         tts.say(text)
 
-
+    # animated hello with given name
     def animatedHello(self, name):
 
         atts = self.create_proxy("ALAnimatedSpeech")
@@ -30,7 +29,7 @@ class Demo():
         string = 'Hello,' + animation + name + wait
         atts.say(string)
 
-
+    # init ALProxy for given module
     def create_proxy(self, name):
 
         try:
@@ -41,14 +40,14 @@ class Demo():
 
         return proxy
 
-
+    # start speech recognition within a given time in sec, return reconized words
     def speech_recognize(self, time):
         with sr.Microphone() as source:
             self.r.adjust_for_ambient_noise(source)
             print 'Mic activated. Start listening...'
             audio = self.r.listen(source, phrase_time_limit=time)
             try:
-                print 'Reconized: ' + self.r.recognize_google(audio)
+                print 'Reconized words: ' + self.r.recognize_google(audio)
                 return self.r.recognize_google(audio)
             except LookupError, e:
                 print e
@@ -58,7 +57,7 @@ class Demo():
                 print 'Reconized nothing within ' + str(time) + ' second!'
                 return ''
 
-
+    # reduce memory array from nao, return required information
     def filter_info(self, array):
 
         list = []
@@ -80,24 +79,25 @@ class Demo():
 
         return list
 
-
+    # let nao turn into a given direction (alpha, beta)
     def turnBody(self, alpha, beta):
 
         motion = self.create_proxy('ALMotion')
-
         headYawP = motion.getAngles(["HeadYaw"], False)[0]
 
+        # turn head into init position (0) to avoid collide, if head yaw is turned
         if headYawP != 0:
             motion.setAngles('HeadYaw', 0, 0.1)
 
+        # turn whole body into alpha position only if its necessary
         if alpha- headYawP > 0.1 or alpha - headYawP < -0.1:
             motion.moveTo(0, 0, + headYawP + alpha)
 
-        # turn head to direction of target
+        # turn head pitch to direction (beta) of target
         motion.setAngles('HeadPitch', beta - 0.3, 0.1)
         time.sleep(2)
 
-
+    # let nao learn or relearn new faces
     def learnNewFace(self, rename = ''):
 
         faceProxy = self.create_proxy("ALFaceDetection")
@@ -137,18 +137,20 @@ class Demo():
                     time.sleep(2)
                     print 'ERROR WITH LEARNING YOUR FACE!! '
 
+    # decision tree for greeting. Greet, learn or relearn person based on score and already greeted
     def greeting(self, face):
 
         if face['name'] != '':
 
+            # less than 20%, person is unknown -> learn
             if face['score'] <= 0.2:
                 self.learnNewFace()
 
-            # less than 60%, can be him/her or not
+            # less than 60%, person is known but score to low -> relearn
             elif face['score'] <= 0.6:
                 self.learnNewFace(face['name'])
 
-            # more than 60% probability
+            # more than 60% probability, person is well known
             elif face['score'] > 0.6 and face['name'] not in self.checked:
                 motion = self.create_proxy('ALMotion')
 
@@ -164,7 +166,7 @@ class Demo():
         else:
             self.learnNewFace()
 
-    # this filter will compare all faces and return the person (index) with the lowest score
+    # compare all faces and return the person (index) with the lowest distance
     def compareFaces(self, faces):
 
         # remove all faces with more than 0.7 score
@@ -239,13 +241,13 @@ class Demo():
 
                 time.sleep(1)
 
-            # turn body 90 degree to left
+            # end of side loop, turn body 90 degree to left
             motion.setAngles('HeadYaw', 0, 0.1)
             motion.setAngles('HeadPitch', 0, 0.1)
             motion.moveTo(0, 0, math.pi/2)
             time.sleep(2)
 
-
+        # end of main loop
         faceProxy.unsubscribe("Test_Face")
         motion.rest()
         print "Test terminated successfully."

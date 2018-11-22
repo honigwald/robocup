@@ -9,10 +9,11 @@ import sys
 import time
 import math
 from naoqi import ALProxy
-import demo as dm
 import speech_recognition as sr
 from random import uniform
 from functools import reduce
+
+from commands import *
 
 class AssistentAgent():
 
@@ -28,6 +29,7 @@ class AssistentAgent():
             print 'mic on... start recording!'
             audio = self.r.listen(source, phrase_time_limit=time)
             try:
+                print 'Reconized words: ' + self.r.recognize_google(audio)
                 return self.r.recognize_google(audio)
             except LookupError, e:
                 print e
@@ -233,14 +235,6 @@ class AssistentAgent():
 
                             # prevents nao is stuck while recognized someone
                             time.sleep(2)
-                            '''
-                            counter += 1
-                            if counter == 5:
-                                angleOfHeadYaw = angleOfHeadYaw + 1.0
-                                self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
-                                j += 1
-
-                        '''
 
 
                         ### SOMEONE UNKOWN IS RECOGNIZED - TRY TO LEARN
@@ -372,14 +366,8 @@ if __name__ =='__main__':
     port = 9559
     nao = AssistentAgent(nao_ip, port)
 
-    nao.say('awaiting keyword!')
-    #nao.say('hello')
-    #nao.testFace()
-    #nao.face('cleardb')
-    #nao.rundemo()
-    #nao.say('hi')
+    nao.say('Hi, i am Norman!')
 
-    # nao.move(0.8, 0.4)
     while True:
         print "Waiting for Keyword"
         keyword = nao.speech_recognize(2.0).lower()
@@ -432,7 +420,7 @@ if __name__ =='__main__':
 
             # start command from another module
             elif command == 'demonstration':
-                demo = dm.Demo(nao_ip, port)
+                demo = Demo(nao_ip, port)
                 demo.run()
 
             # NAO will rest
