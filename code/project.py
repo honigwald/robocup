@@ -13,15 +13,17 @@ import speech_recognition as sr
 from random import uniform
 from functools import reduce
 
-from commands import *
+from commands import demo
 
 class AssistentAgent():
+
 
     def __init__(self, ip, port):
         self.ip = ip
         self.port = port
         self.r = sr.Recognizer()
         self.r.energy_threshold = 4000
+
 
     def speech_recognize(self, time):
         with sr.Microphone() as source:
@@ -335,6 +337,16 @@ class AssistentAgent():
         elif cntrl == 'moveTo':
             motion.moveTo(coords[0], coords[1], coords[2])
 
+    def newPerson(self):
+
+        self.say('position yourself in front me')
+        time.sleep(1)
+        self.say('say ok when you are ready')
+        resp = nao.speech_recognize(2.0).lower()
+        if resp == 'ok':
+            nao.face('learn')
+        else:
+            nao.say('oh something went wrong')
 
     ### Nao speaks given text
     def say(self, text):
@@ -396,15 +408,8 @@ if __name__ =='__main__':
             elif command == 'new person':
                 # TODO: NEEDS TO BE TESTED
                 # RESULT: Voice speed has to slowdown!
-                nao.say('position yourself in front me')
-                time.sleep(1)
-                nao.say('say ok when you are ready')
-                resp = nao.speech_recognize(2.0).lower()
-                print resp
-                if resp == 'ok':
-                    nao.face('learn')
-                else:
-                    nao.say('oh something went wrong')
+                nao.learnPerson()
+
 
             # remove all faces from facedb
             elif command == 'reset':
@@ -419,7 +424,7 @@ if __name__ =='__main__':
                 nao.rundemo()
 
             # start command from another module
-            elif command == 'demonstration':
+            elif command == 'start':
                 demo = Demo(nao_ip, port)
                 demo.run()
 
@@ -432,7 +437,3 @@ if __name__ =='__main__':
                 nao.say('ok, i will rest now!')
                 nao.motion('rest')
                 break
-
-            elif command == "move":
-                coords = [0.0, 0.0]
-                nao.move('turnleft', coords)

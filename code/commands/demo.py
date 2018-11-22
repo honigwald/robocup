@@ -84,18 +84,23 @@ class Demo():
 
         motion = self.create_proxy('ALMotion')
         headYawP = motion.getAngles(["HeadYaw"], False)[0]
+        value = 0
 
         # turn head into init position (0) to avoid collide, if head yaw is turned
         if headYawP != 0:
             motion.setAngles('HeadYaw', 0, 0.1)
 
         # turn whole body into alpha position only if its necessary
-        if alpha- headYawP > 0.1 or alpha - headYawP < -0.1:
-            motion.moveTo(0, 0, + headYawP + alpha)
+        if alpha - headYawP > 0.1 or alpha - headYawP < -0.1:
+            motion.moveTo(0, 0, headYawP + alpha)
+            value = headYawP + alpha
 
         # turn head pitch to direction (beta) of target
         motion.setAngles('HeadPitch', beta - 0.3, 0.1)
         time.sleep(2)
+
+        return value
+
 
     # let nao learn or relearn new faces
     def learnNewFace(self, rename = ''):
@@ -172,7 +177,7 @@ class Demo():
         # remove all faces with more than 0.7 score
         if len(faces) > 1:
             for face in faces:
-                if face['name'] in self.checked and face['score'] > 0.7:
+                if face['name'] in self.checked and face['score'] > 0.6:
                     # remove face from faces
                     faces.remove(face)
 
@@ -195,8 +200,6 @@ class Demo():
         memoryProxy = self.create_proxy("ALMemory")
         motion = self.create_proxy("ALMotion")
 
-        faceProxy.clearDatabase()
-
         faceProxy.subscribe("Test_Face", 500, 0.0)
         motion.wakeUp()
 
@@ -208,9 +211,15 @@ class Demo():
             # For each loop set head into position
             motion.setAngles('HeadPitch', -0.4, 0.1)
             headYawPosition = -0.6
+            sumAngle = 0
 
             # side loop: for each iteration check for face recognition
-            for j in range(1,24):
+            for j in range(6,24):
+
+                # turn head, avoid deadlock
+                if j % 6 == 0:
+                    motion.setAngles(['HeadYaw', 'HeadPitch'], [ headYawPosition, -0.4 ], 0.1)
+                    headYawPosition += 0.6
 
                 time.sleep(1)
                 val = memoryProxy.getData("FaceDetected", 500)
@@ -226,25 +235,16 @@ class Demo():
                     if -0.2 < face['alpha'] < 0.2 and -0.2 < face['beta'] < 0.2 :
                         self.greeting(face)
                     else:
-                        self.turnBody(face['alpha'], face['beta'])
-                        j -= 1
+                        sumAngle += self.turnBody(face['alpha'], face['beta'])
 
                 else:
                     print 'No one detected'
 
-                    # turn head, avoid deadlock
-                    if j % 6 == 0:
-                        motion.setAngles(['HeadYaw', 'HeadPitch'], [ headYawPosition, -0.4 ], 0.1)
-
-
-                        headYawPosition += 0.6
-
-                time.sleep(1)
 
             # end of side loop, turn body 90 degree to left
             motion.setAngles('HeadYaw', 0, 0.1)
             motion.setAngles('HeadPitch', 0, 0.1)
-            motion.moveTo(0, 0, math.pi/2)
+            motion.moveTo(0, 0, math.pi/2 + sumAngle)
             time.sleep(2)
 
         # end of main loop
