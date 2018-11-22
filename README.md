@@ -62,6 +62,6 @@ When the project is running you can use following commands to control NAO:
 * **start** - starts the demonstration
 
 ## Authors
-* **Willi Cai** - [wiilee](https://github.com/wiilee)
+* **Willy Cai** - [wiilee](https://github.com/wiilee)
 * **Simon Blanck** - [honigwald](https://github.com/honigwald)
 
