@@ -14,6 +14,8 @@ The main idea of our project is an easy-to-interact NAO with enabled speech reco
 NAO should also be able to recognize known and unknown persons and give some feedback if such an event happens.
 We call this configuration "The greeting Agent".
 
+### Demonstration
+
 ### Used features of NAOqi
 We used mainly following API features:
 - ALMotion
@@ -48,6 +50,16 @@ To start the program you've to run following command in a terminal:
 ```
 Python project.py <IP-Adress of NAO>
 ```
+### List of commands
+When the project is running you can use following commands to control NAO:
+* **hello** - gives a voice feedback 
+* **database** - prints face database content to CLI
+* **reset** - reset stored faces in database
+* **wake up** - NAO goes to standInit posture
+* **new person** - learning process for facerecognition is started
+* **rest** - NAO goes to rest posture
+* **stop** - NAO goes to rest posture and python program is stopped
+* **start** - starts the demonstration
 
 ## Authors
 * **Willi Cai** - [wiilee](https://github.com/wiilee)
