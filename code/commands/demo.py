@@ -91,12 +91,17 @@ class Demo():
             motion.setAngles('HeadYaw', 0, 0.1)
 
         # turn whole body into alpha position only if its necessary
-        if alpha - headYawP > 0.1 or alpha - headYawP < -0.1:
-            motion.moveTo(0, 0, headYawP + alpha)
-            value = headYawP + alpha
+        if -2 < alpha < 2:
+            if alpha - headYawP > 0.1 or alpha - headYawP < -0.1:
+                motion.moveTo(0, 0, headYawP + alpha)
+                value = headYawP + alpha
 
         # turn head pitch to direction (beta) of target
-        motion.setAngles('HeadPitch', beta - 0.3, 0.1)
+        if -0.6 < beta - 0.3 < 0.5:
+            motion.setAngles('HeadPitch', beta - 0.3, 0.1)
+        elif -0.6 < beta < 0.5:
+            motion.setAngles('HeadPitch', beta, 0.1)
+
         time.sleep(2)
 
         return value
@@ -141,6 +146,7 @@ class Demo():
                     self.say('Something went wrong! Please position your face in front of mine!')
                     time.sleep(2)
                     print 'ERROR WITH LEARNING YOUR FACE!! '
+                    break
 
     # decision tree for greeting. Greet, learn or relearn person based on score and already greeted
     def greeting(self, face):
@@ -209,7 +215,7 @@ class Demo():
         for i in range(4):
 
             # For each loop set head into position
-            motion.setAngles('HeadPitch', -0.4, 0.1)
+            # motion.setAngles('HeadPitch', -0.4, 0.1)
             headYawPosition = -0.6
             sumAngle = 0
 
@@ -238,13 +244,13 @@ class Demo():
                         sumAngle += self.turnBody(face['alpha'], face['beta'])
 
                 else:
-                    print 'No one detected'
+                    print 'No one detected: ' + val
 
 
             # end of side loop, turn body 90 degree to left
             motion.setAngles('HeadYaw', 0, 0.1)
             motion.setAngles('HeadPitch', 0, 0.1)
-            motion.moveTo(0, 0, math.pi/2 + sumAngle)
+            motion.moveTo(0, 0, math.pi/2 - sumAngle)
             time.sleep(2)
 
         # end of main loop
