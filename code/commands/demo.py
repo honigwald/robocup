@@ -123,16 +123,12 @@ class Demo():
                     reLearnFace = faceProxy.reLearnFace(str(rename))
 
                     if reLearnFace:
-                        self.say('I knew it! Thank you, ' + rename + '!')
+                        self.say('Haha I know it! Thank you! ' + rename)
                         break
 
                     else:
                         self.say('Oh, sorry my dear!')
                         continue
-                elif ans == 'no':
-                    continue
-                else:
-                    x = 0
 
             # learn new person
             self.say('Whats your name?')
@@ -162,11 +158,11 @@ class Demo():
                 self.learnNewFace()
 
             # less than 60%, person is known but score to low -> relearn
-            elif face['score'] <= 0.5:
+            elif face['score'] <= 0.6:
                 self.learnNewFace(face['name'])
 
             # more than 60% probability, person is well known
-            elif face['score'] > 0.5 and face['name'] not in self.checked:
+            elif face['score'] > 0.6 and face['name'] not in self.checked:
                 motion = self.create_proxy('ALMotion')
 
                 headPitchP = motion.getAngles(["HeadPitch"], False)
@@ -209,10 +205,10 @@ class Demo():
         faceProxy = self.create_proxy("ALFaceDetection")
         memoryProxy = self.create_proxy("ALMemory")
         motion = self.create_proxy("ALMotion")
-        posture = self.create_proxy('ALRobotPosture')
 
         faceProxy.subscribe("Test_Face", 500, 0.0)
         motion.wakeUp()
+
 
         faces = []
 
@@ -226,7 +222,6 @@ class Demo():
 
             # side loop: for each iteration check for face recognition
             for j in range(6,24):
-
 
                 # turn head, avoid deadlock
                 if j % 6 == 0:
@@ -244,22 +239,18 @@ class Demo():
                     face = faces[index]
                     print 'lowest score: ' + str(faces[index])
 
-                    headYawP = motion.getAngles(["HeadYaw"], False)[0]
-
-                    if -0.2 < face['alpha'] - headYawP < 0.2 and -0.2 < face['beta'] < 0.2 :
+                    if -0.2 < face['alpha'] < 0.2 and -0.2 < face['beta'] < 0.2 :
                         self.greeting(face)
                     else:
-                        #posture.goToPosture("StandInit", 0.5)
                         sumAngle += self.turnBody(face['alpha'], face['beta'])
 
                 else:
-                    print 'No one detected: ' + str(val)
+                    print 'No one detected'
 
 
             # end of side loop, turn body 90 degree to left
             motion.setAngles('HeadYaw', 0, 0.1)
             motion.setAngles('HeadPitch', 0, 0.1)
-            posture.goToPosture("StandInit", 0.5)
             motion.moveTo(0, 0, math.pi/2 - sumAngle)
             time.sleep(2)
 
@@ -272,7 +263,6 @@ class Demo():
 
 
 if __name__ == '__main__':
-
 
     demo = Demo('10.0.7.183', 9559)
     demo.run()

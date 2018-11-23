@@ -17,11 +17,13 @@ from commands import demo as d
 
 class AssistentAgent():
 
+
     def __init__(self, ip, port):
         self.ip = ip
         self.port = port
         self.r = sr.Recognizer()
         self.r.energy_threshold = 4000
+
 
     def speech_recognize(self, time):
         with sr.Microphone() as source:
@@ -40,6 +42,7 @@ class AssistentAgent():
                 return ''
 
     def create_proxy(self, name):
+
         try:
             proxy = ALProxy(name, self.ip, self.port)
         except Exception, e:
@@ -50,6 +53,7 @@ class AssistentAgent():
 
     ### Goto predefined motions
     def motion(self, state, joint = None, angle = None):
+
         motion = self.create_proxy("ALMotion")
 
         if state == 'wakeUp':
@@ -65,8 +69,11 @@ class AssistentAgent():
 
     ### Controlling facerecognition API
     def face(self, state):
+
         faceProxy = self.create_proxy("ALFaceDetection")
+
         faceProxy.setTrackingEnabled(False)
+        #faceProxy.setRecognitionConfidenceThreshold(0.6)
 
         # store recognized face with given name in database
         if state == 'learn':
@@ -110,6 +117,7 @@ class AssistentAgent():
 
         # returns the name and position of recognized persons
         elif state == 'getdata':
+
             memValue = "FaceDetected"
             memoryProxy = self.create_proxy("ALMemory")
 
@@ -148,6 +156,7 @@ class AssistentAgent():
             print "Actual DB: %s" % (faceProxy.getLearnedFacesList())
 
     def filter_info(self, array):
+
         list = []
         print array
 
@@ -174,7 +183,6 @@ class AssistentAgent():
 
         return list
 
-    ### DEPRACTED
     ### The final demonstration of the project
     def rundemo(self):
         print "Demo is running"
@@ -187,40 +195,49 @@ class AssistentAgent():
         checked = []
 
         period = 500
-        faceProxy.subscribe("face", period, 0.0 )
+        faceProxy.subscribe("face", period, 0.0 )                                # This array stores already greeted people
 
-        # outer loop: each loop do a 90 degree turn
-        for i in range(4):
+        for i in range(4):                            # outer loop - turn your body 90* left
             j = 0
             angleOfHeadYaw = (-2.0)
             self.motion('moveHead', 'HeadPitch', -0.5)
             time.sleep(2)
             counter = 0
 
-            # inner loop: each loop turn headyaw
-            for j in range(3):
+            for j in range(3):                                # inner loop - head looks from right 2center 2left
+
+                # TODO: direct head of nao to face of person if 1. someone recognized and known and 2. someone recognized and unknown
                 faces = self.face('getdata')
+
                 ### <NAME> IS RECOGNIZED - START GREETING PROCEDURE
+                #if data and data[0] != '' and data[0] not in checked:
                 if faces:
+                #if data and data[0] != '':
+                    #self.move('position', data[1])
                     for face in faces:
+
                         # recognize someone known and not checked
                         print 'Name: ' + face['name']
                         print 'Checked: ' + str(checked)
+                        #if face['name'] != '' and not face['name'] in checked:
                         if not face['name'] in checked and face['score'] > 0.5:
-                            ### turn into direction of recognized person
                             self.tracker('start')
                             headyaw_angle = self.motion('getHeadyawAngle')
+                            print "HeadYaw angle: %s" % headyaw_angle
                             if headyaw_angle > 0.5:
                                 self.move('moveTo', [0,0,headyaw_angle[0]])
                                 time.sleep(3)
                             self.tracker('stop')
-                            # greet
+                            #name = data[0]
+                            #if str(name) not in checked:        # check if target already recognized
+                                # greet
                             self.animated('hello', face['name'])
                             checked.append(face['name'])            # mark as recognized
                             self.motion('moveHead', 'HeadPitch', -0.4)
 
                             # prevents nao is stuck while recognized someone
                             time.sleep(2)
+
 
                         ### SOMEONE UNKOWN IS RECOGNIZED - TRY TO LEARN
                         '''
@@ -249,6 +266,7 @@ class AssistentAgent():
                 angleOfHeadYaw = angleOfHeadYaw + 1.0
                 self.motion('moveHead', 'HeadYaw', angleOfHeadYaw)
                 time.sleep(3)
+
                 ### --- END OF INNER LOOP --- ###
 
             self.motion('moveHead', 'HeadYaw', 0)
@@ -258,13 +276,14 @@ class AssistentAgent():
             ### --- END OF OUTER LOOP --- ###
 
         # cleanup after finished demonstration
+        #self.tracker('stop')
         faceProxy.unsubscribe("face")
         self.motion('rest')
         print "Demo is finished"
 
-    ### DEPRACTED
     ### Controlling the facetracking function of nao
     def tracker(self, state):
+
         tracker = self.create_proxy("ALTracker")
 
         # start the tracker [modes: Head, Body, Move]
@@ -275,19 +294,34 @@ class AssistentAgent():
             tracker.registerTarget(targetName, faceWidth)
             tracker.track(targetName)
 
+        # return true if new target is detected
+        elif state == "check":
+            if tracker.isNewTargetDetected():
+                return True
+            else:
+                # stop tracker to manualy move the head
+                #self.tracker('stop')
+                # random move of head yaw
+                # start tracker again to return to the flow
+                #self.tracker('start')
+                return False
+
         # stops the tracker and cleanup
         elif state == "stop":
             tracker.stopTracker()
             tracker.unregisterAllTargets()
 
     ### Controlling the movement of nao
+    ### TODO: HERE WE'VE TO IMPLEMENT RANDOM MOVEMENT
     def move(self, cntrl, coords):
+
         motion = self.create_proxy("ALMotion")
         posture = self.create_proxy("ALRobotPosture")
 
         # Prepare NAO to walk
         motion.wakeUp()
         posture.goToPosture("StandInit", 0.5)
+        #motion.standInit()
 
         # check which move to do
         if cntrl == 'forward':
@@ -295,6 +329,7 @@ class AssistentAgent():
         elif cntrl == 'backward':
             motion.moveTo(-(coords[0]), 0, 0)
         elif cntrl == 'position':
+            print coords
             motion.moveTo(coords[3], coords[4], 0)
         elif cntrl == 'turnleft':
             theta = math.pi/2
@@ -302,8 +337,8 @@ class AssistentAgent():
         elif cntrl == 'moveTo':
             motion.moveTo(coords[0], coords[1], coords[2])
 
-    ### Learn a new person
     def newPerson(self):
+
         self.say('position yourself in front me')
         time.sleep(1)
         self.say('say ok when you are ready')
@@ -360,26 +395,28 @@ if __name__ =='__main__':
             if command == 'hello':
                 nao.say('hello')
 
+            # get stored faces
+            elif command == 'database':
+                nao.face('getdb')
+
             # wakeup NAO - goto motion standInit
             elif command == 'wake up':
                 nao.motion('wakeUp')
                 nao.motion('moveHead', 'HeadPitch', -0.6)
 
-            # get stored faces
-            elif command == 'get data':
-                nao.face('getdb')
+            # execute face_learning phase
+            elif command == 'new person':
+                # TODO: NEEDS TO BE TESTED
+                # RESULT: Voice speed has to slowdown!
+                nao.learnPerson()
+
 
             # remove all faces from facedb
-            elif command == 'clear data':
+            elif command == 'reset':
                 nao.say('removing all faces from database')
                 nao.face('cleardb')
                 nao.say('database cleared')
 
-            # execute face_learning phase
-            elif command == 'new person':
-                nao.learnPerson()
-
-            # DEPRACTED
             # run the demonstration of the project
             elif command == 'test':
                 # TODO: RUNDEMO STILL NOT FINISHED - WE'RE MAKING PROGRESS
@@ -394,9 +431,6 @@ if __name__ =='__main__':
             # NAO will rest
             elif command == 'rest':
                 nao.motion('rest')
-
-            elif command == 'left':
-                nao.move('turnleft', [0,0])
 
             # stop processing and let NAO rest
             elif command == "stop":
