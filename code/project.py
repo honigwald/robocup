@@ -13,7 +13,7 @@ import speech_recognition as sr
 from random import uniform
 from functools import reduce
 
-from commands import demo
+from commands import demo as d
 
 class AssistentAgent():
 
@@ -425,7 +425,7 @@ if __name__ =='__main__':
 
             # start command from another module
             elif command == 'start':
-                demo = Demo(nao_ip, port)
+                demo = d.Demo(nao_ip, port)
                 demo.run()
 
             # NAO will rest
